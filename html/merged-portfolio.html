@@ -1,0 +1,2250 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="shortcut icon" href="fortuna.png" type="image/x-icon" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="/static/tailwind.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <title>Fortuna - Portfolio Dashboard</title>
+  
+  <style>
+    :root {
+      --primary-dark: #0f172a;
+      --secondary-dark: #1e293b;
+      --tertiary-dark: #334155;
+      --navy-dark: #0c1426;
+      --navy-medium: #1a2332;
+      --navy-light: #2d3748;
+      --gold-primary: #f59e0b;
+      --gold-secondary: #d97706;
+      --gold-light: #fbbf24;
+      --gold-accent: #92400e;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --border-color: #475569;
+      --success: #10b981;
+      --danger: #ef4444;
+      --glass-bg: rgba(30, 41, 59, 0.8);
+      --glass-border: rgba(148, 163, 184, 0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--navy-dark) 0%, var(--primary-dark) 50%, var(--navy-medium) 100%);
+      font-family: 'Inter', sans-serif;
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .glass-morphism {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .gold-gradient {
+      background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-secondary) 100%);
+    }
+
+    .glow-effect {
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+    }
+
+    .hover-lift {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .hover-lift:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin: 0.75rem 0;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+      }
+    }
+
+    .chart-container {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 0.75rem;
+      height: 280px;
+      overflow: hidden;
+    }
+
+    .holdings-container {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 0.75rem;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .modern-table {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 0.75rem 0;
+    }
+
+    .modern-table table {
+      table-layout: fixed;
+      width: 100%;
+    }
+
+    .modern-table th,
+    .modern-table td {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .modern-table th:nth-child(1),
+    .modern-table td:nth-child(1) { width: 12%; } /* Sector */
+    .modern-table th:nth-child(2),
+    .modern-table td:nth-child(2) { width: 20%; } /* Company */
+    .modern-table th:nth-child(3),
+    .modern-table td:nth-child(3) { width: 15%; } /* Price */
+    .modern-table th:nth-child(4),
+    .modern-table td:nth-child(4) { width: 10%; } /* Owned */
+    .modern-table th:nth-child(5),
+    .modern-table td:nth-child(5) { width: 10%; } /* % Owned */
+    .modern-table th:nth-child(6),
+    .modern-table td:nth-child(6) { width: 12%; } /* Available */
+    .modern-table th:nth-child(7),
+    .modern-table td:nth-child(7) { width: 21%; } /* Risk */
+
+    .table-header {
+      background: linear-gradient(135deg, var(--tertiary-dark) 0%, var(--secondary-dark) 100%);
+      border-bottom: 2px solid var(--gold-primary);
+    }
+
+    .table-row {
+      border-bottom: 1px solid var(--glass-border);
+      transition: all 0.3s ease;
+    }
+
+    .table-row:hover {
+      background: rgba(245, 158, 11, 0.1);
+      transform: scale(1.01);
+    }
+
+    .holding-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .holding-card:hover {
+      border-color: var(--gold-primary);
+      box-shadow: 0 8px 25px rgba(245, 158, 11, 0.2);
+    }
+
+    .stock-chart-container {
+      height: 60px;
+      margin-top: 0.5rem;
+      position: relative;
+      background: rgba(15, 23, 42, 0.3);
+      border-radius: 6px;
+      padding: 4px;
+    }
+
+    .stock-chart-container canvas {
+      border-radius: 4px;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .inline-chart-container {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      height: 120px;
+      display: none;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    .inline-chart-container.show {
+      display: block;
+    }
+
+    .inline-chart-container canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .stock-name-clickable {
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-radius: 4px;
+      padding: 2px 4px;
+    }
+
+    .stock-name-clickable:hover {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--gold-primary) !important;
+    }
+
+    .stock-name-clickable.active {
+      background: rgba(245, 158, 11, 0.3);
+      color: var(--gold-primary) !important;
+      font-weight: bold;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+      }
+      to {
+        opacity: 1;
+        max-height: 120px;
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+      }
+    }
+
+    .summary-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+      margin: 0.75rem 0;
+    }
+
+    .stat-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 1rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--gold-primary), var(--gold-secondary));
+    }
+
+    .notification-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      max-width: 400px;
+      pointer-events: none;
+    }
+
+    .notification {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: auto;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .notification.buy {
+      border-left: 4px solid var(--success);
+    }
+
+    .notification.sell {
+      border-left: 4px solid var(--danger);
+    }
+
+    .notification-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .notification-title {
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .notification.buy .notification-title {
+      color: var(--success);
+    }
+
+    .notification.sell .notification-title {
+      color: var(--danger);
+    }
+
+    .notification-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 0.5rem;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+
+    .notification-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+
+    .notification-body {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+
+    .notification-details {
+      margin-top: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%) scale(0.8);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0) scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideOut {
+      from {
+        transform: translateX(0) scale(1);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(100%) scale(0.8);
+        opacity: 0;
+      }
+    }
+
+    .notification.removing {
+      animation: slideOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    .footer-modern {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--glass-border);
+      margin-top: 1rem;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .price-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 0.5rem;
+    }
+
+    .price-up {
+      background: var(--success);
+      box-shadow: 0 0 10px var(--success);
+    }
+
+    .price-down {
+      background: var(--danger);
+      box-shadow: 0 0 10px var(--danger);
+    }
+
+    .price-neutral {
+      background: var(--text-muted);
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-light) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+
+    .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 2000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(8px);
+      overflow-y: auto;
+      padding: 20px 0;
+    }
+
+    .modal-content {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      margin: 6vh auto;
+      padding: 1.2rem;
+      border-radius: 16px;
+      width: 92%;
+      max-width: 520px;
+      color: var(--text-primary);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.45);
+      position: relative;
+    }
+
+    .close {
+      color: var(--text-muted);
+      float: right;
+      font-size: 24px;
+      font-weight: 700;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0.35rem 0.5rem;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+
+    .close:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .form-group {
+      margin-bottom: 0.85rem;
+    }
+
+    .form-group label {
+      display: block;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      border-radius: 8px;
+      padding: 0.6rem 0.7rem;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: var(--gold-primary);
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+    }
+
+    .action-button-group {
+      display: flex;
+      gap: 0.6rem;
+    }
+
+    .action-btn {
+      flex: 1;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.65rem 0.5rem;
+      text-align: center;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 700;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .action-btn input[type="radio"] {
+      display: none;
+    }
+
+    .buy-action-btn {
+      color: var(--success);
+      background: rgba(16, 185, 129, 0.12);
+    }
+
+    .buy-action-btn.active {
+      border-color: var(--success);
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
+      background: rgba(16, 185, 129, 0.22);
+    }
+
+    .sell-action-btn {
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.12);
+    }
+
+    .sell-action-btn.active {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18);
+      background: rgba(239, 68, 68, 0.22);
+    }
+
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.6rem;
+      margin-top: 1rem;
+    }
+
+    .modal-btn {
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .modal-btn.secondary {
+      color: var(--text-secondary);
+      background: rgba(51, 65, 85, 0.65);
+    }
+
+    .modal-btn.primary {
+      color: #111827;
+      border-color: var(--gold-primary);
+      background: linear-gradient(135deg, var(--gold-primary), var(--gold-light));
+    }
+
+    .modal-status {
+      margin-top: 0.5rem;
+      font-size: 0.82rem;
+      min-height: 1rem;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 768px) {
+      .section-title {
+        font-size: 1rem;
+      }
+      
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+      }
+      
+      .summary-stats {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+      }
+
+      .chart-container, .holdings-container {
+        height: 220px;
+        padding: 0.5rem;
+      }
+
+      .stock-chart-container {
+        height: 50px;
+        margin-top: 0.5rem;
+      }
+
+      /* Mobile table adjustments */
+      .modern-table {
+        overflow-x: auto;
+      }
+
+      .modern-table table {
+        table-layout: auto;
+        min-width: 600px;
+      }
+
+      .modern-table th,
+      .modern-table td {
+        white-space: nowrap;
+        width: auto;
+      }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen">
+  <!-- Notification Container -->
+  <div id="notification-container" class="notification-container"></div>
+  <footer class="footer-modern">
+    <div class="flex items-center justify-center gap-2">
+      <i data-lucide="crown" class="w-5 h-5" style="color: var(--gold-primary);"></i>
+      <span class="font-semibold" style="color: var(--text-primary);">Fortuna Dashboard</span>
+    </div>
+  </footer>
+
+  <div class="container mx-auto px-4 py-2">
+    <div class="mb-3 flex justify-end">
+      <button type="button" onclick="openPortfolioModal()" class="hover-lift inline-flex items-center gap-2 rounded-lg border border-slate-500 bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 hover:border-amber-400 hover:text-amber-300">
+        <i data-lucide="briefcase" class="w-4 h-4"></i>
+        Manage Portfolio
+      </button>
+    </div>
+    <!-- Dashboard Grid -->
+    <div class="dashboard-grid">
+      <!-- Chart Section -->
+      <div class="chart-container hover-lift hidden md:block">
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="bar-chart-3" class="w-4 h-4" style="color: var(--gold-primary);"></i>
+          <h2 class="section-title text-sm mb-0">Holdings Distribution</h2>
+        </div>
+        <div class="h-56">
+          <canvas id="myChart" class="w-full h-full rounded-lg"></canvas>
+        </div>
+      </div>
+
+      <!-- Current Holdings -->
+      <div class="holdings-container hover-lift scrollbar-hide">
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="portfolio" class="w-4 h-4" style="color: var(--gold-primary);"></i>
+          <h2 class="section-title text-sm mb-0">Current Holdings</h2>
+        </div>
+        <div id="stock-list" class="space-y-1"></div>
+      </div>
+    </div>
+
+    <!-- Stock Prices Table -->
+    <div class="modern-table hover-lift">
+      <div class="px-3 py-2 border-b border-gray-600">
+        <div class="flex items-center gap-2">
+          <i data-lucide="trending-up" class="w-4 h-4" style="color: var(--gold-primary);"></i>
+          <h2 class="section-title text-sm mb-0">Live Market Prices</h2>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table id="stocks" class="w-full">
+          <thead class="table-header">
+            <tr>
+              <th class="px-3 py-2 text-left font-semibold text-xs" title="Sector">Sector</th>
+              <th class="px-3 py-2 text-left font-semibold text-xs" title="Company">Company</th>
+              <th class="px-3 py-2 text-left font-semibold text-xs" title="Price">Price</th>
+              <th class="px-3 py-2 text-left font-semibold text-xs" title="Owned">Owned</th>
+              <th class="px-3 py-2 text-left font-semibold text-xs" title="% Owned">% Owned</th>
+              <th class="px-3 py-2 text-left font-semibold text-xs" title="Available">Available</th>
+              <th class="px-3 py-2 text-left font-semibold text-xs" title="Risk Level">Risk</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Portfolio Summary Stats -->
+    <div class="summary-stats">
+      <div class="stat-card hover-lift">
+        <div class="flex items-center justify-center gap-1 mb-1">
+          <i data-lucide="trending-up" class="w-4 h-4" style="color: var(--gold-primary);"></i>
+          <h3 class="text-sm font-semibold" style="color: var(--text-secondary);">Total Invested</h3>
+        </div>
+        <div id="total-invested" class="text-lg font-bold" style="color: var(--text-primary);">₹0</div>
+      </div>
+
+      <div class="stat-card hover-lift">
+        <div class="flex items-center justify-center gap-1 mb-1">
+          <i data-lucide="piggy-bank" class="w-4 h-4" style="color: var(--gold-primary);"></i>
+          <h3 class="text-sm font-semibold" style="color: var(--text-secondary);">Standby Cash</h3>
+        </div>
+        <div id="standby-cash" class="text-lg font-bold" style="color: var(--text-primary);">₹0</div>
+      </div>
+
+      <div class="stat-card hover-lift">
+        <div class="flex items-center justify-center gap-1 mb-1">
+          <i data-lucide="target" class="w-4 h-4" style="color: var(--gold-primary);"></i>
+          <h3 class="text-sm font-semibold" style="color: var(--text-secondary);">Net Worth</h3>
+        </div>
+        <div id="net-worth" class="text-lg font-bold">₹0</div>
+      </div>
+
+      <div class="stat-card hover-lift">
+        <div class="flex items-center justify-center gap-1 mb-1">
+          <i data-lucide="activity" class="w-4 h-4" style="color: var(--gold-primary);"></i>
+          <h3 class="text-sm font-semibold" style="color: var(--text-secondary);">P&L</h3>
+        </div>
+        <div id="profit-loss" class="text-lg font-bold">₹0</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="portfolioModal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="modalCloseButton">&times;</span>
+      <h2 class="text-xl font-bold mb-3">Manage Portfolio</h2>
+
+      <div class="form-group">
+        <label>Account</label>
+        <div id="modalAccountInfo" class="text-base font-semibold text-blue-300"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Current Cash</label>
+        <div id="modalCashInfo" class="text-base font-semibold text-green-400"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Action</label>
+        <div class="action-button-group">
+          <div class="action-btn buy-action-btn" onclick="selectModalAction('buy')">
+            <input type="radio" name="modalAction" value="buy" id="buyRadio">
+            BUY SHARES
+          </div>
+          <div class="action-btn sell-action-btn" onclick="selectModalAction('sell')">
+            <input type="radio" name="modalAction" value="sell" id="sellRadio">
+            SELL SHARES
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="stockSelect">Select Stock</label>
+        <select id="stockSelect">
+          <option value="">-- Choose a stock --</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="quantityInput">Number of Shares</label>
+        <input type="number" id="quantityInput" min="1" placeholder="Enter quantity">
+      </div>
+
+      <div class="form-group">
+        <label>Current Holdings</label>
+        <div id="currentHoldings" class="text-sm text-gray-300"></div>
+      </div>
+
+      <div id="modalStatus" class="modal-status"></div>
+
+      <div class="btn-group">
+        <button class="modal-btn secondary" type="button" onclick="closePortfolioModal()">Cancel</button>
+        <button class="modal-btn primary" type="button" onclick="executeModalTransaction()">Execute Transaction</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer-modern">
+    <div class="flex items-center justify-center gap-2">
+      <i data-lucide="crown" class="w-5 h-5" style="color: var(--gold-primary);"></i>
+      <span class="font-semibold" style="color: var(--text-primary);">Perseverantia © 2025</span>
+    </div>
+  </footer>
+
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    let xValues = [];
+    let yValues = [];
+    const ctx = document.getElementById("myChart");
+
+    // Notification system variables
+    let previousStockHoldings = {};
+    let isFirstLoad = true;
+    
+    // Stock charts for individual holdings
+    let stockCharts = {};
+    
+    // Individual stock price history storage
+    let stockPriceHistory = {};
+    let previousStockPrices = {};
+    let chartUpdateFlags = {};
+    
+    // Inline chart management
+    let currentActiveChart = -1;
+    let inlineCharts = {};
+    
+    // WebSocket connection
+    let ws = null;
+    let reconnectInterval = null;
+    let isConnected = false;
+    let currentSchoolCode = null;
+
+    // Chart.js configuration for modern dark theme
+    Chart.defaults.backgroundColor = "rgba(245, 158, 11, 0.8)";
+    Chart.defaults.borderColor = "rgba(245, 158, 11, 1)";
+    Chart.defaults.color = "#f8fafc";
+
+    let stockChart = new Chart(ctx, {
+      type: "doughnut",
+      data: {
+        labels: xValues,
+        datasets: [
+          {
+            label: "Holdings Value",
+            data: yValues,
+            backgroundColor: [
+              "rgba(245, 158, 11, 0.8)",
+              "rgba(217, 119, 6, 0.8)",
+              "rgba(251, 191, 36, 0.8)",
+              "rgba(146, 64, 14, 0.8)",
+              "rgba(245, 158, 11, 0.6)",
+              "rgba(217, 119, 6, 0.6)",
+              "rgba(251, 191, 36, 0.6)",
+              "rgba(146, 64, 14, 0.6)",
+              "rgba(245, 158, 11, 0.4)",
+              "rgba(217, 119, 6, 0.4)"
+            ],
+            borderColor: [
+              "rgba(245, 158, 11, 1)",
+              "rgba(217, 119, 6, 1)",
+              "rgba(251, 191, 36, 1)",
+              "rgba(146, 64, 14, 1)",
+              "rgba(245, 158, 11, 1)",
+              "rgba(217, 119, 6, 1)",
+              "rgba(251, 191, 36, 1)",
+              "rgba(146, 64, 14, 1)",
+              "rgba(245, 158, 11, 1)",
+              "rgba(217, 119, 6, 1)"
+            ],
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: {
+          padding: 5
+        },
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 10,
+              font: {
+                size: 10,
+                family: 'Inter'
+              },
+              color: '#f8fafc',
+              boxWidth: 12,
+              boxHeight: 12
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(30, 41, 59, 0.95)',
+            titleColor: '#f8fafc',
+            bodyColor: '#cbd5e1',
+            borderColor: 'rgba(245, 158, 11, 0.5)',
+            borderWidth: 1,
+            cornerRadius: 8,
+            titleFont: {
+              size: 11
+            },
+            bodyFont: {
+              size: 10
+            },
+            callbacks: {
+              label: function(context) {
+                const value = context.parsed;
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                return `${context.label}: ₹${value.toLocaleString("hi")} (${percentage}%)`;
+              }
+            }
+          }
+        },
+        cutout: '60%',
+        elements: {
+          arc: {
+            borderRadius: 4
+          }
+        }
+      },
+    });
+
+    // Notification Functions
+    function showNotification(type, stockName, quantity, price, school) {
+      const container = document.getElementById('notification-container');
+      const notification = document.createElement('div');
+      
+      const actionText = type === 'buy' ? 'BOUGHT' : 'SOLD';
+      const totalValue = quantity * price;
+      const icon = type === 'buy' ? 'trending-up' : 'trending-down';
+      
+      notification.className = `notification ${type}`;
+      notification.innerHTML = `
+        <div class="notification-header">
+          <div class="flex items-center gap-2">
+            <i data-lucide="${icon}" class="w-4 h-4"></i>
+            <span class="notification-title">${actionText}</span>
+          </div>
+          <button class="notification-close" onclick="removeNotification(this)">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div class="notification-body">
+          <strong>${school}</strong> ${type === 'buy' ? 'purchased' : 'sold'} <strong>${quantity}</strong> shares of <strong>${stockName}</strong>
+        </div>
+        <div class="notification-details">
+          <span>Price: ₹${price.toLocaleString("hi")}</span>
+          <span>Total: ₹${totalValue.toLocaleString("hi")}</span>
+        </div>
+      `;
+      
+      container.appendChild(notification);
+      
+      // Re-initialize icons for the new notification
+      lucide.createIcons();
+      
+      // Auto-remove after 10 seconds
+      setTimeout(() => {
+        removeNotification(notification.querySelector('.notification-close'));
+      }, 10000);
+    }
+
+    function removeNotification(closeButton) {
+      const notification = closeButton.closest('.notification');
+      notification.classList.add('removing');
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 400);
+    }
+
+    function setModalStatus(message, tone) {
+      const status = document.getElementById('modalStatus');
+      if (!status) return;
+      status.textContent = message || '';
+      if (tone === 'error') {
+        status.style.color = 'var(--danger)';
+      } else if (tone === 'success') {
+        status.style.color = 'var(--success)';
+      } else {
+        status.style.color = 'var(--text-muted)';
+      }
+    }
+
+    function getSSIDToken() {
+      if (!document.cookie) return '';
+      const cookiePair = document.cookie
+        .split(';')
+        .map((item) => item.trim())
+        .find((item) => item.startsWith('ssid='));
+      if (!cookiePair) return '';
+      return decodeURIComponent(cookiePair.substring(5));
+    }
+
+    function getSchoolCodeFromToken() {
+      const token = getSSIDToken();
+      if (!token || !token.includes('_')) return '';
+      return token.split('_')[0];
+    }
+
+    function selectModalAction(action) {
+      document.querySelectorAll('.action-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelector(`.${action}-action-btn`).classList.add('active');
+      document.getElementById(`${action}Radio`).checked = true;
+    }
+
+    function populateModalHoldings(db, schoolData) {
+      const holdingsDiv = document.getElementById('currentHoldings');
+      if (!holdingsDiv) return;
+
+      let holdingsHTML = '';
+      schoolData.stocks.forEach((quantity, index) => {
+        if (quantity > 0) {
+          const stock = db.stockprices[index];
+          const value = Number(stock.price) * quantity;
+          holdingsHTML += `<div>${stock.name}: ${quantity} shares (Rs ${value.toLocaleString("hi")})</div>`;
+        }
+      });
+
+      holdingsDiv.innerHTML = holdingsHTML || '<div class="text-gray-500">No current holdings</div>';
+    }
+
+    async function openPortfolioModal() {
+      const modal = document.getElementById('portfolioModal');
+      const schoolCode = getSchoolCodeFromToken();
+      const token = getSSIDToken();
+
+      if (!token || !schoolCode) {
+        setModalStatus('Session not found. Please login again.', 'error');
+        modal.style.display = 'block';
+        return;
+      }
+
+      const db = window.latestData;
+      if (!db || !db.schooldata || !db.stockprices) {
+        setModalStatus('Loading data. Please try again in a moment.', 'error');
+        return;
+      }
+
+      const schoolData = db.schooldata.find((s) => s.schoolcode === schoolCode);
+      if (!schoolData) {
+        setModalStatus('Account not found in live data.', 'error');
+        return;
+      }
+
+      currentSchoolCode = schoolCode;
+      document.getElementById('modalAccountInfo').textContent = schoolCode;
+      document.getElementById('modalCashInfo').textContent = `Rs ${Number(schoolData.cash).toLocaleString("hi")}`;
+
+      const stockSelect = document.getElementById('stockSelect');
+      stockSelect.innerHTML = '<option value="">-- Choose a stock --</option>';
+      db.stockprices.forEach((stock, index) => {
+        stockSelect.innerHTML += `<option value="${index}">${stock.name} - Rs ${Number(stock.price).toLocaleString("hi")}</option>`;
+      });
+
+      document.getElementById('quantityInput').value = '';
+      document.querySelectorAll('input[name="modalAction"]').forEach(radio => {
+        radio.checked = false;
+      });
+      document.querySelectorAll('.action-btn').forEach(btn => btn.classList.remove('active'));
+      populateModalHoldings(db, schoolData);
+      setModalStatus('', '');
+      modal.style.display = 'block';
+    }
+
+    function closePortfolioModal() {
+      const modal = document.getElementById('portfolioModal');
+      modal.style.display = 'none';
+      currentSchoolCode = null;
+      setModalStatus('', '');
+    }
+
+    async function executeModalTransaction() {
+      const action = document.querySelector('input[name="modalAction"]:checked');
+      const stockIndex = parseInt(document.getElementById('stockSelect').value, 10);
+      const quantity = parseInt(document.getElementById('quantityInput').value, 10);
+      const token = getSSIDToken();
+      const db = window.latestData;
+
+      if (!action) {
+        setModalStatus('Please choose Buy or Sell.', 'error');
+        return;
+      }
+      if (!Number.isInteger(stockIndex) || stockIndex < 0) {
+        setModalStatus('Please select a stock.', 'error');
+        return;
+      }
+      if (!quantity || quantity <= 0) {
+        setModalStatus('Please enter a valid quantity.', 'error');
+        return;
+      }
+      if (!token || !token.includes('_')) {
+        setModalStatus('Session expired. Please login again.', 'error');
+        return;
+      }
+      if (!db || !db.schooldata || !db.stockprices || !currentSchoolCode) {
+        setModalStatus('Data unavailable. Please wait for live update.', 'error');
+        return;
+      }
+
+      const schoolData = db.schooldata.find((s) => s.schoolcode === currentSchoolCode);
+      const stock = db.stockprices[stockIndex];
+      if (!schoolData || !stock) {
+        setModalStatus('Unable to resolve account or stock.', 'error');
+        return;
+      }
+
+      if (action.value === 'sell' && schoolData.stocks[stockIndex] < quantity) {
+        setModalStatus(`You only own ${schoolData.stocks[stockIndex]} shares.`, 'error');
+        return;
+      }
+
+      const endpoint = action.value === 'buy' ? '/buyStock' : '/sellStock';
+      const url = `${endpoint}?school=${encodeURIComponent(token)}&stock=${encodeURIComponent(stock.name)}&n=${quantity}`;
+
+      setModalStatus('Processing transaction...', '');
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.success === false || data.error) {
+          setModalStatus(data.message || data.error || 'Transaction failed.', 'error');
+          return;
+        }
+
+        setModalStatus('Transaction successful.', 'success');
+        update();
+        setTimeout(() => {
+          closePortfolioModal();
+        }, 600);
+      } catch (error) {
+        console.error('Transaction error:', error);
+        setModalStatus('Network error. Please try again.', 'error');
+      }
+    }
+
+    function initializeStockPriceHistory(stockPrices) {
+      stockPrices.forEach((stock, index) => {
+        if (!stockPriceHistory[index]) {
+          stockPriceHistory[index] = [];
+        }
+        if (!previousStockPrices[index]) {
+          previousStockPrices[index] = stock.price;
+          // Add initial price to history
+          stockPriceHistory[index].push({
+            price: stock.price,
+            timestamp: Date.now()
+          });
+        }
+      });
+    }
+
+    function detectPriceChanges(stockPrices) {
+      let hasChanges = false;
+      let changedStocks = [];
+      
+      stockPrices.forEach((stock, index) => {
+        const currentPrice = stock.price;
+        const previousPrice = previousStockPrices[index];
+        
+        if (previousPrice !== undefined && currentPrice !== previousPrice) {
+          // Price has changed, add to history
+          stockPriceHistory[index].push({
+            price: currentPrice,
+            timestamp: Date.now()
+          });
+          
+          // Keep only last 50 price points to prevent memory issues
+          if (stockPriceHistory[index].length > 50) {
+            stockPriceHistory[index] = stockPriceHistory[index].slice(-50);
+          }
+          
+          // Mark this stock for chart update
+          chartUpdateFlags[index] = true;
+          hasChanges = true;
+          changedStocks.push({index, name: stock.name, oldPrice: previousPrice, newPrice: currentPrice});
+          
+          console.log(`Price change detected for ${stock.name}: ${previousPrice} → ${currentPrice}`);
+        }
+        
+        previousStockPrices[index] = currentPrice;
+      });
+      
+      return { hasChanges, changedStocks };
+    }
+
+    function updateStockChart(stockIndex, stockName) {
+      const chartId = `stock-chart-${stockIndex}`;
+      const sampleChartId = `sample-stock-chart-${stockIndex}`;
+      
+      // Try to find the actual chart first, then sample chart
+      let canvasId = chartId;
+      if (!document.getElementById(chartId)) {
+        canvasId = sampleChartId;
+      }
+      
+      if (!document.getElementById(canvasId)) {
+        console.log(`Canvas not found for stock ${stockIndex}: ${canvasId}`);
+        return;
+      }
+      
+      const priceHistory = stockPriceHistory[stockIndex];
+      if (!priceHistory || priceHistory.length < 2) {
+        console.log(`Insufficient price history for ${stockName}`);
+        return;
+      }
+      
+      // Extract just the prices for the chart
+      const prices = priceHistory.map(entry => entry.price);
+      
+      createStockChart(canvasId, prices, stockName);
+      console.log(`Updated chart for ${stockName} with ${prices.length} data points`);
+    }
+
+    function showInlineChart(stockIndex, stockName) {
+      // Hide current active chart if any
+      if (currentActiveChart !== -1) {
+        hideInlineChart(currentActiveChart);
+        
+        // Remove active class from previous stock name
+        const prevStockName = document.querySelector(`.stock-name-clickable[data-stock-index="${currentActiveChart}"]`);
+        if (prevStockName) {
+          prevStockName.classList.remove('active');
+        }
+      }
+
+      // If clicking the same stock, just hide it
+      if (currentActiveChart === stockIndex) {
+        currentActiveChart = -1;
+        return;
+      }
+
+      const chartContainer = document.getElementById(`inline-chart-${stockIndex}`);
+      if (chartContainer) {
+        chartContainer.classList.add('show');
+        currentActiveChart = stockIndex;
+
+        // Add active class to clicked stock name
+        const stockNameElement = document.querySelector(`.stock-name-clickable[data-stock-index="${stockIndex}"]`);
+        if (stockNameElement) {
+          stockNameElement.classList.add('active');
+        }
+
+        // Create or update the chart
+        setTimeout(() => {
+          createInlineChart(stockIndex, stockName);
+        }, 100);
+      }
+    }
+
+    function hideInlineChart(stockIndex) {
+      const chartContainer = document.getElementById(`inline-chart-${stockIndex}`);
+      if (chartContainer) {
+        chartContainer.classList.remove('show');
+        
+        // Destroy the chart to free memory
+        const chartId = `inline-chart-canvas-${stockIndex}`;
+        if (inlineCharts[chartId]) {
+          inlineCharts[chartId].destroy();
+          delete inlineCharts[chartId];
+        }
+      }
+    }
+
+    function createInlineChart(stockIndex, stockName) {
+      const canvasId = `inline-chart-canvas-${stockIndex}`;
+      const ctx = document.getElementById(canvasId);
+      if (!ctx) {
+        console.log(`Inline canvas not found: ${canvasId}`);
+        return null;
+      }
+
+      // Destroy existing chart if it exists
+      if (inlineCharts[canvasId]) {
+        inlineCharts[canvasId].destroy();
+      }
+
+      let priceData = [];
+      
+      // Get price history for this stock
+      if (stockPriceHistory[stockIndex] && stockPriceHistory[stockIndex].length >= 2) {
+        priceData = stockPriceHistory[stockIndex].map(entry => entry.price);
+      } else {
+        // No sufficient price history - show "No data" message
+        console.log(`No price history available for ${stockName} - showing no data message in inline chart`);
+        
+        try {
+          inlineCharts[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: [],
+              datasets: []
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  display: false
+                },
+                tooltip: {
+                  enabled: false
+                }
+              },
+              scales: {
+                x: {
+                  display: true,
+                  grid: {
+                    color: 'rgba(148, 163, 184, 0.1)'
+                  },
+                  ticks: {
+                    color: '#94a3b8',
+                    font: {
+                      size: 10
+                    }
+                  }
+                },
+                y: {
+                  display: true,
+                  grid: {
+                    color: 'rgba(148, 163, 184, 0.1)'
+                  },
+                  ticks: {
+                    color: '#94a3b8',
+                    font: {
+                      size: 10
+                    }
+                  }
+                }
+              },
+              layout: {
+                padding: 20
+              }
+            },
+            plugins: [{
+              afterDraw: function(chart) {
+                const ctx = chart.ctx;
+                const width = chart.width;
+                const height = chart.height;
+                
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '12px Inter, sans-serif';
+                ctx.fillText('No price history available', width / 2, height / 2 - 5);
+                ctx.font = '10px Inter, sans-serif';
+                ctx.fillStyle = '#6b7280';
+                ctx.fillText('Chart will appear as prices change', width / 2, height / 2 + 10);
+                ctx.restore();
+              }
+            }]
+          });
+          
+          return inlineCharts[canvasId];
+        } catch (error) {
+          console.error(`Error creating no-data inline chart for ${stockName}:`, error);
+          return null;
+        }
+      }
+
+      // Determine trend color
+      const firstPrice = priceData[0];
+      const lastPrice = priceData[priceData.length - 1];
+      const isUpTrend = lastPrice >= firstPrice;
+      
+      const trendColor = isUpTrend ? 
+        'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)';
+      const trendBorderColor = isUpTrend ? 
+        'rgba(16, 185, 129, 1)' : 'rgba(239, 68, 68, 1)';
+
+      const labels = priceData.map((_, index) => index + 1);
+
+      try {
+        inlineCharts[canvasId] = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: stockName,
+              data: priceData,
+              borderColor: trendBorderColor,
+              backgroundColor: trendColor,
+              borderWidth: 3,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 3,
+              pointHoverRadius: 6,
+              pointBackgroundColor: trendBorderColor,
+              pointHoverBackgroundColor: trendBorderColor,
+              pointHoverBorderColor: '#ffffff',
+              pointHoverBorderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              intersect: false,
+              mode: 'index'
+            },
+            plugins: {
+              legend: {
+                display: false
+              },
+              tooltip: {
+                backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                titleColor: '#f8fafc',
+                bodyColor: '#cbd5e1',
+                borderColor: trendBorderColor,
+                borderWidth: 1,
+                cornerRadius: 8,
+                displayColors: false,
+                titleFont: {
+                  size: 13
+                },
+                bodyFont: {
+                  size: 12
+                },
+                callbacks: {
+                  title: function(context) {
+                    return `${stockName} - Point ${context[0].label}`;
+                  },
+                  label: function(context) {
+                    return `Price: ₹${context.parsed.y.toLocaleString("hi")}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                display: true,
+                grid: {
+                  color: 'rgba(148, 163, 184, 0.1)'
+                },
+                ticks: {
+                  color: '#94a3b8',
+                  font: {
+                    size: 10
+                  }
+                }
+              },
+              y: {
+                display: true,
+                grid: {
+                  color: 'rgba(148, 163, 184, 0.1)'
+                },
+                ticks: {
+                  color: '#94a3b8',
+                  font: {
+                    size: 10
+                  },
+                  callback: function(value) {
+                    return '₹' + value.toLocaleString("hi");
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        console.log(`Inline chart created for ${stockName}`);
+        return inlineCharts[canvasId];
+      } catch (error) {
+        console.error(`Error creating inline chart for ${stockName}:`, error);
+        return null;
+      }
+    }
+
+    function createStockChart(canvasId, priceHistory, stockName) {
+      const ctx = document.getElementById(canvasId);
+      if (!ctx) {
+        console.log(`Canvas not found: ${canvasId}`);
+        return null;
+      }
+
+      console.log(`Creating chart for ${stockName} with data:`, priceHistory);
+
+      // Destroy existing chart if it exists
+      if (stockCharts[canvasId]) {
+        stockCharts[canvasId].destroy();
+      }
+
+      // If no price history, show "No data" message
+      if (!priceHistory || priceHistory.length < 2) {
+        console.log(`Insufficient price history for ${stockName} - showing no data message`);
+        
+        // Create a chart with no data message
+        try {
+          stockCharts[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: [],
+              datasets: []
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  display: false
+                },
+                tooltip: {
+                  enabled: false
+                }
+              },
+              scales: {
+                x: {
+                  display: false
+                },
+                y: {
+                  display: false
+                }
+              },
+              layout: {
+                padding: 10
+              }
+            },
+            plugins: [{
+              afterDraw: function(chart) {
+                const ctx = chart.ctx;
+                const width = chart.width;
+                const height = chart.height;
+                
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '10px Inter, sans-serif';
+                ctx.fillText('No price history yet', width / 2, height / 2);
+                ctx.restore();
+              }
+            }]
+          });
+          
+          return stockCharts[canvasId];
+        } catch (error) {
+          console.error(`Error creating no-data chart for ${stockName}:`, error);
+          return null;
+        }
+      }
+
+      // Prepare data - get last 20 price points or all available
+      const dataPoints = priceHistory.slice(-20);
+      const labels = dataPoints.map((_, index) => index + 1);
+      
+      // Determine trend color
+      const firstPrice = dataPoints[0];
+      const lastPrice = dataPoints[dataPoints.length - 1];
+      const isUpTrend = lastPrice >= firstPrice;
+      
+      const trendColor = isUpTrend ? 
+        'rgba(16, 185, 129, 0.8)' : 'rgba(239, 68, 68, 0.8)';
+      const trendBorderColor = isUpTrend ? 
+        'rgba(16, 185, 129, 1)' : 'rgba(239, 68, 68, 1)';
+
+      try {
+        stockCharts[canvasId] = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: stockName,
+              data: dataPoints,
+              borderColor: trendBorderColor,
+              backgroundColor: trendColor,
+              borderWidth: 2,
+              fill: true,
+              tension: 0.3,
+              pointRadius: 0,
+              pointHoverRadius: 4,
+              pointHoverBackgroundColor: trendBorderColor,
+              pointHoverBorderColor: '#ffffff',
+              pointHoverBorderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              intersect: false,
+              mode: 'index'
+            },
+            plugins: {
+              legend: {
+                display: false
+              },
+              tooltip: {
+                backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                titleColor: '#f8fafc',
+                bodyColor: '#cbd5e1',
+                borderColor: trendBorderColor,
+                borderWidth: 1,
+                cornerRadius: 6,
+                displayColors: false,
+                titleFont: {
+                  size: 11
+                },
+                bodyFont: {
+                  size: 10
+                },
+                callbacks: {
+                  title: function(context) {
+                    return stockName;
+                  },
+                  label: function(context) {
+                    return `₹${context.parsed.y.toLocaleString("hi")}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                display: false
+              },
+              y: {
+                display: false,
+                grid: {
+                  display: false
+                }
+              }
+            },
+            elements: {
+              point: {
+                radius: 0
+              }
+            }
+          }
+        });
+
+        console.log(`Chart created successfully for ${stockName}`);
+        return stockCharts[canvasId];
+      } catch (error) {
+        console.error(`Error creating chart for ${stockName}:`, error);
+        return null;
+      }
+    }
+
+    // Helper function to update only specific price cells without regenerating table
+    function updatePricesInTable(sp, schoolData, changedStocks) {
+      console.log("Updating only price cells for changed stocks");
+      
+      changedStocks.forEach(({ index, name, oldPrice, newPrice }) => {
+        // Find the price cell for this stock
+        const tableRows = document.querySelectorAll("#stocks tbody tr.table-row");
+        if (tableRows[index]) {
+          const priceCell = tableRows[index].querySelector("td:nth-child(3)");
+          if (priceCell) {
+            let priceColor = "var(--text-primary)";
+            let indicatorClass = "price-neutral";
+            
+            if (newPrice > oldPrice) {
+              priceColor = "var(--success)";
+              indicatorClass = "price-up";
+            } else if (newPrice < oldPrice) {
+              priceColor = "var(--danger)";
+              indicatorClass = "price-down";
+            }
+            
+            priceCell.style.color = priceColor;
+            priceCell.innerHTML = `
+              <div class="flex items-center gap-1">
+                <span class="price-indicator ${indicatorClass}"></span>
+                ₹${newPrice.toLocaleString("hi")}
+              </div>`;
+          }
+        }
+      });
+    }
+
+    // Helper function to update stock prices table
+    function updateStockPricesTable(sp, schoolData, changedStocks) {
+      const tableBody = document.querySelector("#stocks tbody");
+      
+      // Check if we need to preserve inline chart state
+      const wasChartOpen = currentActiveChart !== -1;
+      const activeChartIndex = currentActiveChart;
+      
+      // If no holdings changes and chart is open, just update individual price cells
+      if (changedStocks.length > 0 && wasChartOpen && !isFirstLoad) {
+        updatePricesInTable(sp, schoolData, changedStocks);
+        return;
+      }
+      
+      // If no price changes and no holdings changes, and chart is open, don't regenerate table
+      if (changedStocks.length === 0 && !isFirstLoad && wasChartOpen) {
+        console.log("Skipping table update - no changes and chart is open");
+        return;
+      }
+
+      console.log("Full table regeneration needed");
+      let tableHTML = "";
+
+      for (let i = 0; i < sp.length; i++) {
+        let priceColor = "var(--text-primary)";
+        let indicatorClass = "price-neutral";
+        
+        // Use our price change detection for color indicators
+        if (stockPriceHistory[i] && stockPriceHistory[i].length >= 2) {
+          const currentPrice = sp[i].price;
+          const previousPrice = stockPriceHistory[i][stockPriceHistory[i].length - 2].price;
+          
+          if (currentPrice > previousPrice) {
+            priceColor = "var(--success)";
+            indicatorClass = "price-up";
+          } else if (currentPrice < previousPrice) {
+            priceColor = "var(--danger)";
+            indicatorClass = "price-down";
+          }
+        }
+
+        const ownedPercentage = (schoolData.stocks[i] / sp[i].totalStock * 100).toFixed(2);
+        
+        // Determine if this row's chart should be open
+        const isChartOpen = (activeChartIndex === i);
+        const showClass = isChartOpen ? 'show' : '';
+        const activeClass = isChartOpen ? 'active' : '';
+        
+        tableHTML += `
+          <tr class="table-row">
+            <td class="px-3 py-1 text-xs" style="color: var(--text-secondary);">${sp[i].sector}</td>
+            <td class="px-3 py-1 text-xs font-semibold">
+              <span class="stock-name-clickable ${activeClass}" data-stock-index="${i}" onclick="showInlineChart(${i}, '${sp[i].name.replace(/'/g, "\\'")}')">
+                ${sp[i].name}
+              </span>
+            </td>
+            <td class="px-3 py-1 text-xs font-bold" style="color: ${priceColor};">
+              <div class="flex items-center gap-1">
+                <span class="price-indicator ${indicatorClass}"></span>
+                ₹${sp[i].price.toLocaleString("hi")}
+              </div>
+            </td>
+            <td class="px-3 py-1 text-xs font-semibold" style="color: var(--text-primary);">${schoolData.stocks[i]}</td>
+            <td class="px-3 py-1 text-xs" style="color: var(--gold-primary);">${ownedPercentage}%</td>
+            <td class="px-3 py-1 text-xs" style="color: var(--text-secondary);">${(sp[i].totalStock-sp[i].stocksbought).toLocaleString("hi")}</td>
+            <td class="px-3 py-1 text-xs" style="color: var(--text-muted);">${sp[i].risk || 'N/A'}</td>
+          </tr>
+          <tr class="inline-chart-row">
+            <td colspan="7" style="padding: 0;">
+              <div id="inline-chart-${i}" class="inline-chart-container ${showClass}">
+                <div class="flex items-center gap-2 mb-2">
+                  <i data-lucide="trending-up" class="w-4 h-4" style="color: var(--gold-primary);"></i>
+                  <h3 class="text-sm font-semibold" style="color: var(--text-primary);">${sp[i].name} - Price History</h3>
+                </div>
+                <div class="h-20">
+                  <canvas id="inline-chart-canvas-${i}" class="w-full h-full"></canvas>
+                </div>
+              </div>
+            </td>
+          </tr>`;
+      }
+
+      tableBody.innerHTML = tableHTML;
+      
+      // Restore inline chart if it was open
+      if (wasChartOpen && activeChartIndex !== -1) {
+        setTimeout(() => {
+          createInlineChart(activeChartIndex, sp[activeChartIndex].name);
+          // Re-initialize Lucide icons for the new table content
+          lucide.createIcons();
+        }, 50);
+      } else if (!wasChartOpen) {
+        // Just re-initialize Lucide icons if no chart was open
+        lucide.createIcons();
+      }
+    }
+
+    // Helper function to update holdings list
+    function updateHoldingsList(sp, schoolData, stockprices) {
+      const stockList = document.getElementById("stock-list");
+      let holdingsHTML = "";
+      let needsFullRegeneration = false;
+
+      // Check if holdings structure has changed
+      const currentHoldingsCount = schoolData.stocks.filter(qty => qty > 0).length;
+      const previousHoldingsCount = Object.keys(stockCharts).length;
+      
+      if (currentHoldingsCount !== previousHoldingsCount || isFirstLoad) {
+        needsFullRegeneration = true;
+        // Clean up existing charts if regenerating
+        Object.values(stockCharts).forEach(chart => {
+          if (chart) {
+            chart.destroy();
+          }
+        });
+        stockCharts = {};
+      }
+
+      for (let i = 0; i < sp.length; i++) {
+        const qty = schoolData.stocks[i];
+        if (qty > 0) {
+          const investedValue = (stockprices[i].lastBoughtPrice || sp[i].price) * qty;
+          
+          // Generate unique canvas ID for this stock's chart
+          const chartId = `stock-chart-${i}`;
+          
+          holdingsHTML += `
+            <div class="holding-card">
+              <div class="flex justify-between items-center">
+                <div>
+                  <div class="font-semibold text-sm" style="color: var(--text-primary);">${sp[i].name}</div>
+                  <div class="text-xs" style="color: var(--text-secondary);">${qty} shares • ${sp[i].sector}</div>
+                </div>
+                <div class="text-right">
+                  <div class="font-bold text-sm" style="color: var(--gold-primary);">₹${investedValue.toLocaleString("hi")}</div>
+                  <div class="text-xs" style="color: var(--text-muted);">₹${(stockprices[i].lastBoughtPrice || sp[i].price).toLocaleString("hi")}/share</div>
+                </div>
+              </div>
+              <div class="stock-chart-container">
+                <canvas id="${chartId}" class="w-full h-full"></canvas>
+              </div>
+            </div>`;
+        }
+      }
+
+      // If no holdings HTML was generated, show placeholder
+      if (holdingsHTML === "") {
+        // No real holdings - show placeholder message
+        holdingsHTML = `
+          <div class="text-center py-8">
+            <i data-lucide="portfolio" class="w-12 h-12 mx-auto mb-4" style="color: var(--gold-primary); opacity: 0.5;"></i>
+            <h3 class="text-lg font-semibold mb-2" style="color: var(--text-primary);">No Holdings Yet</h3>
+            <p class="text-sm mb-2" style="color: var(--text-secondary);">Your stock investments will appear here</p>
+            <p class="text-xs" style="color: var(--text-muted);">Visit the trading portal to start investing</p>
+          </div>`;
+      }
+
+      // Only update DOM if holdings structure changed
+      if (needsFullRegeneration) {
+        stockList.innerHTML = holdingsHTML;
+        
+        // Create charts for new holdings structure
+        setTimeout(() => {
+          createHoldingsCharts(sp, schoolData, stockprices);
+        }, 100);
+      }
+    }
+
+    // Helper function to create charts for holdings
+    function createHoldingsCharts(sp, schoolData, stockprices) {
+      let hasRealHoldings = false;
+      
+      // Handle real holdings
+      for (let i = 0; i < sp.length; i++) {
+        const qty = schoolData.stocks[i];
+        if (qty > 0) {
+          hasRealHoldings = true;
+          const chartId = `stock-chart-${i}`;
+          
+          setTimeout(() => {
+            if (stockPriceHistory[i] && stockPriceHistory[i].length >= 2) {
+              // Use actual price history
+              const prices = stockPriceHistory[i].map(entry => entry.price);
+              createStockChart(chartId, prices, sp[i].name);
+            } else {
+              // No price history - create chart with "No data" message
+              createStockChart(chartId, null, sp[i].name);
+            }
+          }, i * 50);
+        }
+      }
+
+      // Don't create sample charts if there are no holdings - placeholder message will be shown instead
+      console.log(`Holdings charts created for ${hasRealHoldings ? 'real' : 'no'} holdings`);
+    }
+
+    // Helper function to update summary stats
+    function updateSummaryStats(sp, schoolData, currentcash) {
+      let totalInvestment = 0;
+      
+      for (let i = 0; i < sp.length; i++) {
+        const qty = schoolData.stocks[i];
+        if (qty > 0) {
+          const investedValue = (sp[i].lastBoughtPrice || sp[i].price) * qty;
+          totalInvestment += investedValue;
+        }
+      }
+
+      const networth = totalInvestment + currentcash;
+      const profitloss = networth - 1000000;
+      const isProfit = profitloss >= 0;
+
+      document.getElementById("total-invested").textContent = `₹${totalInvestment.toLocaleString("hi")}`;
+      document.getElementById("standby-cash").textContent = `₹${currentcash.toLocaleString("hi")}`;
+      document.getElementById("net-worth").textContent = `₹${networth.toLocaleString("hi")}`;
+      document.getElementById("net-worth").style.color = isProfit ? "var(--success)" : "var(--danger)";
+      document.getElementById("profit-loss").textContent = `₹${profitloss.toLocaleString("hi")}`;
+      document.getElementById("profit-loss").style.color = isProfit ? "var(--success)" : "var(--danger)";
+    }
+
+    // Helper function to update only changed stock charts
+    function updateChangedStockCharts(changedStocks, sp) {
+      changedStocks.forEach(({ index, name }) => {
+        if (chartUpdateFlags[index]) {
+          // Update holding chart if it exists
+          const holdingChartId = `stock-chart-${index}`;
+          if (document.getElementById(holdingChartId)) {
+            setTimeout(() => {
+              updateStockChart(index, name);
+            }, index * 25);
+          }
+          
+          // Update sample chart if it exists and no real holdings
+          const sampleChartId = `sample-stock-chart-${index}`;
+          if (document.getElementById(sampleChartId)) {
+            setTimeout(() => {
+              updateStockChart(index, name);
+            }, index * 25);
+          }
+          
+          // Clear the update flag
+          chartUpdateFlags[index] = false;
+        }
+      });
+    }
+
+    // Global function for inline chart management
+    window.showInlineChart = function(stockIndex, stockName) {
+      // Hide current active chart if any
+      if (currentActiveChart !== -1) {
+        hideInlineChart(currentActiveChart);
+        
+        // Remove active class from previous stock name
+        const prevStockName = document.querySelector(`.stock-name-clickable[data-stock-index="${currentActiveChart}"]`);
+        if (prevStockName) {
+          prevStockName.classList.remove('active');
+        }
+      }
+
+      // If clicking the same stock, just hide it
+      if (currentActiveChart === stockIndex) {
+        currentActiveChart = -1;
+        return;
+      }
+
+      const chartContainer = document.getElementById(`inline-chart-${stockIndex}`);
+      if (chartContainer) {
+        chartContainer.classList.add('show');
+        currentActiveChart = stockIndex;
+
+        // Add active class to clicked stock name
+        const stockNameElement = document.querySelector(`.stock-name-clickable[data-stock-index="${stockIndex}"]`);
+        if (stockNameElement) {
+          stockNameElement.classList.add('active');
+        }
+
+        // Create or update the chart
+        setTimeout(() => {
+          createInlineChart(stockIndex, stockName);
+        }, 100);
+      }
+    };
+
+    function detectStockChanges(currentHoldings, stockPrices, schoolCode) {
+      if (isFirstLoad) {
+        // Store initial holdings and skip notifications on first load
+        previousStockHoldings = { ...currentHoldings };
+        isFirstLoad = false;
+        return;
+      }
+
+      // Check for changes in stock holdings
+      for (let i = 0; i < currentHoldings.length; i++) {
+        const currentQty = currentHoldings[i];
+        const previousQty = previousStockHoldings[i] || 0;
+        
+        if (currentQty !== previousQty) {
+          const stockName = stockPrices[i].name;
+          const stockPrice = stockPrices[i].price;
+          const difference = currentQty - previousQty;
+          
+          if (difference > 0) {
+            // Stock was bought
+            showNotification('buy', stockName, difference, stockPrice, schoolCode);
+          } else if (difference < 0) {
+            // Stock was sold
+            showNotification('sell', stockName, Math.abs(difference), stockPrice, schoolCode);
+          }
+        }
+      }
+
+      // Update previous holdings
+      previousStockHoldings = { ...currentHoldings };
+    }
+
+    // WebSocket connection management
+    function connectWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}`;
+      
+      console.log('Connecting to WebSocket:', wsUrl);
+      
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = function() {
+        console.log('WebSocket connected');
+        isConnected = true;
+        
+        // Clear any reconnection attempts
+        if (reconnectInterval) {
+          clearInterval(reconnectInterval);
+          reconnectInterval = null;
+        }
+        
+        // Show connection status
+        showConnectionStatus('connected');
+      };
+
+      ws.onmessage = function(event) {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === 'data' && message.payload) {
+            updateWithData(message.payload);
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+
+      ws.onclose = function() {
+        console.log('WebSocket disconnected');
+        isConnected = false;
+        showConnectionStatus('disconnected');
+        
+        // Attempt to reconnect every 5 seconds
+        if (!reconnectInterval) {
+          reconnectInterval = setInterval(() => {
+            console.log('Attempting to reconnect...');
+            connectWebSocket();
+          }, 5000);
+        }
+      };
+
+      ws.onerror = function(error) {
+        console.error('WebSocket error:', error);
+        isConnected = false;
+        showConnectionStatus('error');
+      };
+    }
+
+    function showConnectionStatus(status) {
+      const statusColors = {
+        'connected': 'var(--success)',
+        'disconnected': 'var(--danger)', 
+        'error': 'var(--danger)'
+      };
+      
+      const statusTexts = {
+        'connected': 'Connected',
+        'disconnected': 'Disconnected - Reconnecting...',
+        'error': 'Connection Error'
+      };
+      
+      // You could add a status indicator here if needed
+      console.log(`Connection status: ${statusTexts[status]}`);
+    }
+
+    function updateWithData(x) {
+      let db = x;
+      window.latestData = db;
+      let sp = db.stockprices;
+      let ssid = "TEST"; // Default for testing
+      
+      // Try to get school ID from cookie
+      if (document.cookie) {
+        const cookieParts = document.cookie.split("=");
+        if (cookieParts.length > 1) {
+          ssid = cookieParts[1].split("_")[0];
+        }
+      }
+      
+      console.log("Data received for school:", ssid);
+      
+      let si = db.schooldata.findIndex((schoolData) => schoolData.schoolcode === ssid);
+      if (si === -1) {
+        si = 0; // Default to first school if not found
+        ssid = db.schooldata[0].schoolcode;
+      }
+      
+      let currentcash = parseFloat(db.schooldata[si].cash);
+
+      // Use real stock price history from database
+      if (db.stockPriceHistory) {
+        stockPriceHistory = {};
+        db.stockPriceHistory.forEach((history, index) => {
+          stockPriceHistory[index] = history || [];
+        });
+        console.log("Loaded stock price history from database:", stockPriceHistory);
+      } else {
+        // Initialize price history on first load (fallback)
+        if (isFirstLoad) {
+          initializeStockPriceHistory(sp);
+        }
+      }
+
+      // Detect price changes and stock holding changes
+      const priceChangeResult = detectPriceChanges(sp);
+      const priceChangesDetected = priceChangeResult.hasChanges;
+      const changedStocks = priceChangeResult.changedStocks;
+
+      // Detect stock changes for notifications
+      let stockHoldingsChanged = false;
+      if (db.schooldata[si].stocks) {
+        const oldHoldings = JSON.stringify(previousStockHoldings);
+        detectStockChanges(db.schooldata[si].stocks, sp, ssid);
+        const newHoldings = JSON.stringify(db.schooldata[si].stocks);
+        stockHoldingsChanged = oldHoldings !== newHoldings;
+      }
+
+      // Only update UI if there are price changes, holding changes, or it's the first load
+      if (priceChangesDetected || stockHoldingsChanged || isFirstLoad) {
+        console.log(`Updating UI - Price changes: ${priceChangesDetected}, Holdings changed: ${stockHoldingsChanged}, First load: ${isFirstLoad}`);
+        
+        if (priceChangesDetected) {
+          console.log(`Price changes for stocks:`, changedStocks.map(c => `${c.name}: ${c.oldPrice} → ${c.newPrice}`).join(', '));
+        }
+
+        // Update chart data
+        xValues = db.stockprices.map((x) => x.name);
+        yValues = db.schooldata[si].stocks.map((qty, i) => qty * sp[i].price);
+
+        // Filter out zero values for chart
+        let filteredXValues = [];
+        let filteredYValues = [];
+        for (let i = 0; i < yValues.length; i++) {
+          if (yValues[i] > 0) {
+            filteredXValues.push(xValues[i]);
+            filteredYValues.push(yValues[i]);
+          }
+        }
+
+        // Update stock prices table only if prices changed or holdings changed
+        if (priceChangesDetected || stockHoldingsChanged || isFirstLoad) {
+          updateStockPricesTable(sp, db.schooldata[si], changedStocks);
+        } else {
+          // Even if no changes, update the active inline chart if it exists
+          if (currentActiveChart !== -1 && chartUpdateFlags[currentActiveChart]) {
+            setTimeout(() => {
+              createInlineChart(currentActiveChart, sp[currentActiveChart].name);
+            }, 50);
+          }
+        }
+
+        // Update holdings list only if holdings changed or first load
+        if (stockHoldingsChanged || isFirstLoad) {
+          updateHoldingsList(sp, db.schooldata[si], db.stockprices);
+        }
+
+        // Update summary stats (always update since they depend on current prices)
+        updateSummaryStats(sp, db.schooldata[si], currentcash);
+
+        // Update main chart only if holdings changed or first load
+        if (stockHoldingsChanged || isFirstLoad) {
+          stockChart.data.labels = filteredXValues;
+          stockChart.data.datasets[0].data = filteredYValues;
+          
+          // Check if there are any holdings
+          if (filteredYValues.length === 0 || filteredYValues.every(val => val === 0)) {
+            // No holdings - show placeholder message
+            stockChart.options.plugins.title = {
+              display: true,
+              text: ['No stocks invested yet', 'Portfolio distribution will appear here'],
+              color: '#94a3b8',
+              font: {
+                size: 12,
+                family: 'Inter'
+              },
+              padding: 20
+            };
+            stockChart.data.labels = [];
+            stockChart.data.datasets[0].data = [];
+          } else {
+            // Has holdings - hide title
+            stockChart.options.plugins.title = {
+              display: false
+            };
+          }
+          
+          stockChart.update();
+        }
+
+        // Update stock charts only for stocks with price changes
+        if (priceChangesDetected) {
+          updateChangedStockCharts(changedStocks, sp);
+        }
+
+        // Update inline chart if currently active and its price changed
+        if (currentActiveChart !== -1 && chartUpdateFlags[currentActiveChart]) {
+          setTimeout(() => {
+            createInlineChart(currentActiveChart, sp[currentActiveChart].name);
+          }, 100);
+        }
+        
+        // Re-initialize Lucide icons after DOM updates
+        if (stockHoldingsChanged || isFirstLoad) {
+          lucide.createIcons();
+        }
+      } else {
+        console.log("No changes detected - skipping UI update");
+      }
+      
+      // Set first load flag to false after initial setup
+      if (isFirstLoad) {
+        isFirstLoad = false;
+      }
+    }
+
+    // Fallback function for when WebSocket is not available
+    function update() {
+      if (!isConnected) {
+        fetch("/data")
+          .then((x) => x.json())
+          .then((x) => {
+            updateWithData(x);
+          })
+          .catch(error => {
+            console.error('Error fetching data:', error);
+          });
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // Initialize icons on first load
+      lucide.createIcons();
+
+      const modal = document.getElementById('portfolioModal');
+      const closeBtn = document.getElementById('modalCloseButton');
+      if (closeBtn) {
+        closeBtn.onclick = closePortfolioModal;
+      }
+      window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+          closePortfolioModal();
+        }
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.style.display === 'block') {
+          closePortfolioModal();
+        }
+      });
+      
+      // Connect to WebSocket for real-time updates
+      connectWebSocket();
+      
+      // Fallback: if WebSocket fails, use polling
+      setTimeout(() => {
+        if (!isConnected) {
+          console.log('WebSocket connection failed, falling back to polling');
+          update();
+          setInterval(update, 1000);
+        }
+      }, 5000);
+    });
+  </script>
+</body>
+
+</html>

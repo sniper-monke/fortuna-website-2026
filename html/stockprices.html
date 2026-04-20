@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="shortcut icon" href="fortuna.png" type="image/x-icon" />
+  <link rel="stylesheet" href="/fonts.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <link href="/static/tailwind.min.css" rel="stylesheet" />
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <title>Fortuna - Dashboard</title>
+</head>
+
+<body class="bg-blue-900 text-white text-base sm:text-lg font-mono">
+  <div class="flex flex-col min-h-screen px-2 sm:px-8 py-4">
+    <div class="bg-gray-900 flex flex-col p-4 rounded-xl mb-4 bgimg">
+      <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
+        <a href="/portfolio">
+          
+        </a>
+      </div>
+
+      <div class="bg-gray-800 p-4 rounded-xl">
+        <div class="overflow-x-auto">
+          <table id="stocks" class="w-full table-auto border border-gray-400 rounded-xl text-sm sm:text-base">
+            <thead>
+              <tr class="bg-gray-700">
+                <th class="px-2 py-2">Sector</th>
+                <th class="px-2 py-2">Name</th>
+                <th class="px-2 py-2">Price</th>
+                <th class="px-2 py-2">Volume Bought</th>
+                <th class="px-2 py-2">Volume in Market</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <footer class="mt-auto bg-black w-full py-4 flex justify-center items-center text-white rounded-t-2xl">
+      Perseverantia &copy; 2025
+    </footer>
+  </div>
+
+  <script>
+    let gtt = [];
+    let l = Array(20).fill(0);
+    let colors = Array(20).fill("white");
+
+    function update() {
+      fetch("/data")
+        .then(res => res.json())
+        .then(db => {
+          let sp = db.stockprices;
+          const ssid = document.cookie.split("=")[1].split("_")[0];
+          let si = db.schooldata.findIndex(x => x.schoolcode === ssid);
+
+          let matching = -1;
+          for (let i = 0; i < db.allPrices.length; i++) {
+            let matches = true;
+            for (let j = 0; j < db.allPrices[i].length; j++) {
+              if (sp[j].price !== db.allPrices[i][j]) {
+                matches = false;
+                break;
+              }
+            }
+            if (matches) {
+              matching = i;
+              break;
+            }
+          }
+
+          let d = "";
+          const tableBody = document.querySelector("#stocks tbody");
+
+          for (let i = 0; i < sp.length; i++) {
+            let col = "white";
+            
+            // Calculate total volume (total shares owned by all schools for this stock)
+            let totalVolume = 0;
+            for (let j = 0; j < db.schooldata.length; j++) {
+              totalVolume += db.schooldata[j].stocks[i] || 0;
+            }
+
+            d += `
+              <tr>
+                <td class="px-2 py-1">${sp[i].sector}</td>
+                <td class="px-2 py-1">${sp[i].name}</td>
+                <td class="px-2 py-1 text-${col}-400" id="sp${i}">${sp[i].price.toLocaleString("hi")}</td>
+                <td class="px-2 py-1">${totalVolume.toLocaleString("hi")}</td>
+                <td class="px-2 py-1">400</td>
+              
+              </tr>`;
+          }
+
+          tableBody.innerHTML = d;
+        });
+    }
+
+    setInterval(update, 1000);
+    document.addEventListener("DOMContentLoaded", update);
+
+  </script>
+</body>
+
+</html>

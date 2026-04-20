@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="shortcut icon" href="fortuna.png" type="image/x-icon" />
+  <link rel="stylesheet" href="/fonts.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <link href="/static/tailwind.min.css" rel="stylesheet" />
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <title>Fortuna - Dashboard</title>
+  <style>
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.65);
+      overflow-y: auto;
+      padding: 20px 0;
+    }
+
+    .modal-content {
+      background: #111827;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 14px;
+      margin: 4vh auto;
+      padding: 1.25rem;
+      width: 92%;
+      max-width: 520px;
+      color: #f9fafb;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      position: relative;
+    }
+
+    .close {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      color: #9ca3af;
+      font-size: 28px;
+      font-weight: 700;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .close:hover {
+      color: #ffffff;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.35rem;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 0.65rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid #374151;
+      background: #1f2937;
+      color: #f9fafb;
+    }
+
+    .action-button-group {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .action-btn {
+      flex: 1;
+      border: 2px solid;
+      border-radius: 10px;
+      padding: 0.75rem;
+      font-weight: 700;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s ease;
+    }
+
+    .action-btn input[type="radio"] {
+      display: none;
+    }
+
+    .buy-action-btn {
+      border-color: #10b981;
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.08);
+    }
+
+    .sell-action-btn {
+      border-color: #ef4444;
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.08);
+    }
+
+    .buy-action-btn.active {
+      background: #10b981;
+      color: #ffffff;
+    }
+
+    .sell-action-btn.active {
+      background: #ef4444;
+      color: #ffffff;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 0.7rem 1rem;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-secondary {
+      background: #374151;
+      color: #f9fafb;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: #ffffff;
+    }
+
+    #currentHoldings {
+      max-height: 160px;
+      overflow-y: auto;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      padding: 0.5rem;
+      background: #0f172a;
+    }
+  </style>
+</head>
+
+<body class="bg-blue-900 text-white text-base sm:text-lg font-mono">
+  <div class="flex flex-col min-h-screen px-2 sm:px-8 py-4">
+    <div class="bg-gray-900 flex flex-col p-4 rounded-xl mb-4 bgimg">
+      <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
+        <button onclick="openPortfolioModal()"
+          class="rounded-xl border-white bg-green-500 border-2 px-4 py-2 text-white hover:text-blue-400 hover:shadow-xl transition">
+          Manage Portfolio
+        </button>
+        <div id="moneydiv" class="text-right">
+          <span>Cash: ₹</span><span id="cash"></span>
+        </div>
+      </div>
+
+      <div class="bg-gray-800 p-4 rounded-xl">
+        <div class="overflow-x-auto">
+          <table id="stocks" class="w-full table-auto border border-gray-400 rounded-xl text-sm sm:text-base">
+            <thead>
+              <tr class="bg-gray-700">
+                <th class="px-2 py-2">Sector</th>
+                <th class="px-2 py-2">Name</th>
+                <th class="px-2 py-2">Price</th>
+                <th class="px-2 py-2">Buy / Sell</th>
+                <th class="px-2 py-2">Qty Owned</th>
+                <th class="px-2 py-2">Total Volume</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div id="portfolioModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">Manage Portfolio</h2>
+            
+            <div class="form-group">
+                <label>Account:</label>
+                <div id="modalAccountInfo" class="text-lg font-semibold text-blue-300"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Current Cash:</label>
+                <div id="modalCashInfo" class="text-lg font-semibold text-green-400"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Action:</label>
+                <div class="action-button-group">
+                    <div class="action-btn buy-action-btn" onclick="selectNewAction('buy')">
+                        <input type="radio" name="action" value="buy" id="buyRadio">
+                        BUY SHARES
+                    </div>
+                    <div class="action-btn sell-action-btn" onclick="selectNewAction('sell')">
+                        <input type="radio" name="action" value="sell" id="sellRadio">
+                        SELL SHARES
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="stockSelect">Select Stock:</label>
+                <select id="stockSelect">
+                    <option value="">-- Choose a stock --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="quantityInput">Number of Shares:</label>
+                <input type="number" id="quantityInput" min="1" placeholder="Enter quantity">
+            </div>
+
+            <div class="form-group">
+                <label>Current Holdings:</label>
+                <div id="currentHoldings" class="text-sm text-gray-300"></div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="executeTransaction()">Execute Transaction</button>
+            </div>
+        </div>
+    </div>
+
+
+    <footer class="mt-auto bg-black w-full py-4 flex justify-center items-center text-white rounded-t-2xl">
+      Perseverantia &copy; 2025
+    </footer>
+  </div>
+
+  <script>
+    let gtt = [];
+    let l = Array(20).fill(0);
+    let colors = Array(20).fill("white");
+    let currentDb = null;
+
+    function getSSIDToken() {
+      const cookiePair = document.cookie
+        .split(";")
+        .map((x) => x.trim())
+        .find((x) => x.startsWith("ssid="));
+      return cookiePair ? decodeURIComponent(cookiePair.split("=")[1]) : "";
+    }
+
+    function getSchoolCode() {
+      const ssid = getSSIDToken();
+      return ssid ? ssid.split("_")[0] : "";
+    }
+
+    function update() {
+      fetch("/data")
+        .then(res => res.json())
+        .then(db => {
+          currentDb = db;
+          let sp = db.stockprices;
+          const ssid = getSchoolCode();
+          let si = db.schooldata.findIndex(x => x.schoolcode === ssid);
+          if (si === -1) return;
+          document.getElementById("cash").innerHTML = db.schooldata[si].cash.toLocaleString("hi");
+
+          let matching = -1;
+          for (let i = 0; i < db.allPrices.length; i++) {
+            let matches = true;
+            for (let j = 0; j < db.allPrices[i].length; j++) {
+              if (sp[j].price !== db.allPrices[i][j]) {
+                matches = false;
+
+              }
+            }
+            if (matches) {
+              matching = i;
+              break;
+            }
+          }
+
+          let d = "";
+          const tableBody = document.querySelector("#stocks tbody");
+
+          for (let i = 0; i < sp.length; i++) {
+            let col = "white";
+            if (matching > 0 && !db.whitePrices) {
+              if (db.allPrices[matching][i] > db.allPrices[matching - 1][i]) col = "green";
+              else if (db.allPrices[matching][i] < db.allPrices[matching - 1][i]) col = "red";
+            } else if (matching === -1) {
+              if (l[i] > sp[i].price) col = "red";
+              else if (l[i] < sp[i].price) col = "green";
+              else col = colors[i];
+              l[i] = sp[i].price;
+              colors[i] = col;
+              if (!db.tradetime) col = "white";
+            }
+
+            d += `
+              <tr>
+                <td class="px-2 py-1">${sp[i].sector}</td>
+                <td class="px-2 py-1">${sp[i].name}</td>
+                <td class="px-2 py-1 text-${col}-400" id="sp${i}">${sp[i].price.toLocaleString("hi")}</td>
+                <td class="px-2 py-1 space-y-1">
+                  <button onclick='buy(this, "${sp[i].name}")' class='buy bg-green-600 px-2 py-1 rounded'>Buy</button>
+                  <button onclick='buyM(this, "${sp[i].name}")' class='buy bg-green-700 px-2 py-1 rounded'>Bulk</button><br>
+                  <button onclick='sell(this, "${sp[i].name}")' class='sell bg-red-600 px-2 py-1 rounded'>Sell</button>
+                  <button onclick='sellM(this, "${sp[i].name}")' class='sell bg-red-700 px-2 py-1 rounded'>Bulk</button>
+                </td>
+                <td class="px-2 py-1">${db.schooldata[si].stocks[i]}</td>
+              </tr>`;
+          }
+
+          tableBody.innerHTML = d;
+        });
+    }
+
+    function populateModalData() {
+      if (!currentDb) return;
+      const schoolCode = getSchoolCode();
+      const schoolData = currentDb.schooldata.find((x) => x.schoolcode === schoolCode);
+      if (!schoolData) return;
+
+      document.getElementById("modalAccountInfo").textContent = schoolCode;
+      document.getElementById("modalCashInfo").textContent = `Rs ${Number(schoolData.cash).toLocaleString("hi")}`;
+
+      const stockSelect = document.getElementById("stockSelect");
+      stockSelect.innerHTML = '<option value="">-- Choose a stock --</option>';
+      currentDb.stockprices.forEach((stock) => {
+        const option = document.createElement("option");
+        option.value = stock.name;
+        option.textContent = `${stock.name} - Rs ${Number(stock.price).toLocaleString("hi")}`;
+        stockSelect.appendChild(option);
+      });
+
+      const holdings = schoolData.stocks
+        .map((qty, i) => ({ qty, name: currentDb.stockprices[i].name }))
+        .filter((x) => x.qty > 0);
+      document.getElementById("currentHoldings").innerHTML = holdings.length
+        ? holdings.map((x) => `<div>${x.name}: ${x.qty} shares</div>`).join("")
+        : "<div>No current holdings</div>";
+    }
+
+    function openPortfolioModal() {
+      update();
+      setTimeout(() => {
+        populateModalData();
+        document.getElementById("portfolioModal").style.display = "block";
+      }, 200);
+    }
+
+    function closeModal() {
+      document.getElementById("portfolioModal").style.display = "none";
+      document.getElementById("quantityInput").value = "";
+      document.querySelectorAll(".action-btn").forEach((btn) => btn.classList.remove("active"));
+      document.querySelectorAll('input[name="action"]').forEach((radio) => {
+        radio.checked = false;
+      });
+    }
+
+    function selectNewAction(action) {
+      document.querySelectorAll(".action-btn").forEach((btn) => btn.classList.remove("active"));
+      document.querySelector(`.${action}-action-btn`).classList.add("active");
+      document.getElementById(`${action}Radio`).checked = true;
+    }
+
+    function executeTransaction() {
+      const action = document.querySelector('input[name="action"]:checked');
+      const stock = document.getElementById("stockSelect").value;
+      const quantity = parseInt(document.getElementById("quantityInput").value, 10);
+      const ssid = getSSIDToken();
+
+      if (!action) return alert("Please select Buy or Sell.");
+      if (!stock) return alert("Please select a stock.");
+      if (!quantity || quantity <= 0) return alert("Please enter a valid quantity.");
+      if (!ssid) return alert("Session not found. Please login again.");
+
+      const endpoint = action.value === "buy" ? "/buyStock" : "/sellStock";
+      fetch(`${endpoint}?school=${encodeURIComponent(ssid)}&stock=${encodeURIComponent(stock)}&n=${quantity}`)
+        .then((res) => res.json())
+        .then((da) => {
+          if (da.error || da.success === false) {
+            alert(da.error || da.message || "Transaction failed.");
+            return;
+          }
+
+          update();
+          closeModal();
+        })
+        .catch(() => alert("Network error while executing transaction."));
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      update();
+      document.querySelector(".close").onclick = closeModal;
+
+      window.onclick = function(event) {
+        const modal = document.getElementById("portfolioModal");
+        if (event.target === modal) closeModal();
+      };
+
+      document.addEventListener("keydown", function(event) {
+        if (event.key === "Escape") closeModal();
+      });
+    });
+
+    setInterval(update, 1000);
+
+    function buy(element, stock) {
+      const ssid = getSSIDToken();
+      fetch(`/buyStock?school=${ssid}&stock=${stock}`)
+        .then(res => res.json())
+        .then(da => {
+          if (da.error || da.success === false) {
+            alert(da.error || da.message || "Buy failed");
+            return;
+          }
+          update();
+        });
+    }
+
+    function buyM(element, stock) {
+      const ssid = getSSIDToken();
+      let n = prompt("Enter no. of stocks:") || 0;
+      if (n == 0) return;
+      fetch(`/buyStock?school=${ssid}&stock=${stock}&n=${n}`)
+        .then(res => res.json())
+        .then(da => {
+          if (da.error || da.success === false) {
+            alert(da.error || da.message || "Buy failed");
+            return;
+          }
+          update();
+        });
+    }
+
+    function sell(element, stock) {
+      const ssid = getSSIDToken();
+      fetch(`/sellStock?school=${ssid}&stock=${stock}`)
+        .then(res => res.json())
+        .then(da => {
+          if (da.error || da.success === false) {
+            alert(da.error || da.message || "Sell failed");
+            return;
+          }
+          update();
+        });
+    }
+
+    function sellM(element, stock) {
+      const ssid = getSSIDToken();
+      let n = prompt("Enter no. of stocks:") || 0;
+      if (n == 0) return;
+      fetch(`/sellStock?school=${ssid}&stock=${stock}&n=${n}`)
+        .then(res => res.json())
+        .then(da => {
+          if (da.error || da.success === false) {
+            alert(da.error || da.message || "Sell failed");
+            return;
+          }
+          update();
+        });
+    }
+  </script>
+</body>
+
+</html>
