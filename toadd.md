@@ -19,9 +19,10 @@ participants will submit via physical slips, the company and no. of shares to sh
 All such shorts must be listed one over the other in the tab. There should be a withdraw short button next to them. When that button is clicked , the (1.05* the money that was credited to their portfolio), will be deducted. text box for the admin next to each withdraw short button where admin can write when the short has to be withdrawn.
 
 For eg:-
-P15    Synapse AI       [withdraw short]    "withdraw at round 4"
 
-P10   Aether Dynamics   [withdraw short]    "withdraw at round 3"
+P15      Synapse AI         [withdraw short]      "withdraw at round 4"
+
+P10     Aether Dynamics     [withdraw short]      "withdraw at round 3"
 
 
 
