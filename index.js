@@ -277,7 +277,10 @@ app.get('/portfolio', (req, res) => {
 });
 
 app.get('/admin', (req, res) => {
-  res.sendFile(__dirname + '/html/admin.html');
+  if (req.query.u == u && req.query.p == p) {
+    return res.sendFile(__dirname + '/html/admin.html');
+  }
+  res.send(`<!DOCTYPE html><html><head><title>Admin Login</title><link href="/static/tailwind.min.css" rel="stylesheet"/><style>body{background:#0f172a;color:#f8fafc;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}</style></head><body><div style="text-align:center"><h1 style="font-size:2rem;font-weight:700;margin-bottom:1rem">Admin Access</h1><p style="color:#94a3b8;margin-bottom:2rem" id="msg">Click below to authenticate.</p><button onclick="login()" style="border:2px solid #f59e0b;color:#f59e0b;background:rgba(245,158,11,0.1);padding:1rem 2rem;border-radius:12px;font-weight:700;font-size:1rem;cursor:pointer">Login</button></div><script>function login(){var u=prompt("Username");var p=prompt("Password");if(u&&p){window.location.href="/admin?u="+encodeURIComponent(u)+"&p="+encodeURIComponent(p)}else{window.location.href="/"}}</script></body></html>`);
 });
 const u = process.env.un;
 const p = process.env.pass;
@@ -314,4 +317,121 @@ app.get('/resetDB', (req, res) => {
   } else {
     return res.json({data: 'false'});
   }
+});
+
+app.get('/updatePricesByPercentage', (req, res) => {
+  if (req.query.u == u && req.query.p == p) {
+    const pct = parseFloat(req.query.percent);
+    if (isNaN(pct)) return res.json({success: false, message: 'Invalid percentage'});
+    const result = db.updatePricesByPercentage(pct);
+    broadcastData();
+    return res.json(result);
+  } else {
+    return res.json({success: false, message: 'Unauthorized'});
+  }
+});
+
+app.get('/transferShares', (req, res) => {
+  if (req.query.u == u && req.query.p == p) {
+    const result = db.transferShares(
+      req.query.from, req.query.to,
+      req.query.stock, parseInt(req.query.qty),
+      parseFloat(req.query.price)
+    );
+    broadcastData();
+    return res.json(result);
+  } else {
+    return res.json({success: false, message: 'Unauthorized'});
+  }
+});
+
+app.get('/createTradeOffer', (req, res) => {
+  const schoolToken = req.query.school;
+  if (!schoolToken || !schoolToken.includes('_')) return res.status(400).json({success: false, message: 'Invalid auth'});
+  const school = schoolToken.split('_')[0];
+  const schoolPass = schoolToken.split('_')[1];
+  const acc = JSON.parse(process.env.accounts);
+  const found = acc.some(a => a.username == school && a.password == schoolPass);
+  if (!found) return res.json({success: false, message: 'Invalid auth'});
+  const result = db.createTradeOffer(
+    school, req.query.to,
+    req.query.stock, parseInt(req.query.qty),
+    parseFloat(req.query.price)
+  );
+  return res.json(result);
+});
+
+app.get('/acceptTradeOffer', (req, res) => {
+  const schoolToken = req.query.school;
+  if (!schoolToken || !schoolToken.includes('_')) return res.status(400).json({success: false, message: 'Invalid auth'});
+  const school = schoolToken.split('_')[0];
+  const schoolPass = schoolToken.split('_')[1];
+  const acc = JSON.parse(process.env.accounts);
+  const found = acc.some(a => a.username == school && a.password == schoolPass);
+  if (!found) return res.json({success: false, message: 'Invalid auth'});
+  // Validate that this offer is addressed to this school
+  delete require.cache[require.resolve('./database.json')];
+  const data = require('./database.json');
+  const offer = (data.tradeOffers || []).find(o => o.id === req.query.offerId);
+  if (!offer) return res.json({success: false, message: 'Offer not found'});
+  if (offer.toSchool !== school) return res.json({success: false, message: 'This offer is not for your team'});
+  const result = db.acceptTradeOffer(req.query.offerId);
+  broadcastData();
+  return res.json(result);
+});
+
+app.get('/getMyTradeOffers', (req, res) => {
+  const schoolToken = req.query.school;
+  if (!schoolToken || !schoolToken.includes('_')) return res.status(400).json({success: false, message: 'Invalid auth'});
+  const school = schoolToken.split('_')[0];
+  const schoolPass = schoolToken.split('_')[1];
+  const acc = JSON.parse(process.env.accounts);
+  const found = acc.some(a => a.username == school && a.password == schoolPass);
+  if (!found) return res.json({success: false, message: 'Invalid auth'});
+  delete require.cache[require.resolve('./database.json')];
+  const data = require('./database.json');
+  const offers = (data.tradeOffers || []).filter(o => o.fromSchool === school || o.toSchool === school);
+  return res.json({success: true, offers});
+});
+
+app.get('/marketFreeze', (req, res) => {
+  if (req.query.u == u && req.query.p == p) {
+    tradetime = false;
+    const snapshot = db.marketFreeze();
+    broadcastData();
+    return res.json({success: true, snapshot});
+  } else {
+    return res.json({success: false, message: 'Unauthorized'});
+  }
+});
+
+app.get('/marketStart', (req, res) => {
+  if (req.query.u == u && req.query.p == p) {
+    tradetime = true;
+    db.marketStart();
+    broadcastData();
+    return res.json({success: true, message: 'Market started'});
+  } else {
+    return res.json({success: false, message: 'Unauthorized'});
+  }
+});
+
+app.get('/calculateScores', (req, res) => {
+  const results = db.calculateScores();
+  return res.json(results);
+});
+
+app.get('/getFreezeScores', (req, res) => {
+  const scores = db.getFreezeScores();
+  return res.json(scores);
+});
+
+app.get('/getFinalScores', (req, res) => {
+  const scores = db.getFinalScores();
+  return res.json(scores);
+});
+
+app.get('/getTradeLog', (req, res) => {
+  const log = db.getTradeLog();
+  return res.json(log);
 });

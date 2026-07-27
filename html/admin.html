@@ -353,6 +353,27 @@
             }
         }
 
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.6rem 1.2rem;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+        .tab-btn:hover {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-primary);
+        }
+        .tab-btn.active-tab {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--gold-primary);
+        }
+        .tab-content.hidden { display: none; }
+
         .close {
             color: var(--text-muted);
             float: right;
@@ -618,99 +639,191 @@
 <body class="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 text-white font-inter">
     <!-- Notification Container -->
     <div id="notification-container" class="notification-container"></div>
-    
-    <script>
-        if (localStorage.getItem("u") && localStorage.getItem("p")) {
-            let u = localStorage.getItem("u");
-            let p = localStorage.getItem("p");
-            fetch(`/adminauth?u=${u}&p=${p}`)
-                .then((x) => x.json())
-                .then((d) => {
-                    if (!d.data) {
-                        localStorage.removeItem("u");
-                        localStorage.removeItem("p");
-                        window.location.href = "/";
-                    }
-                });
-            } else {
-        let u = prompt("Username");
-        let p = prompt("Password");
-        fetch(`/adminauth?u=${u}&p=${p}`)
-            .then((x) => x.json())
-            .then((d) => {
-                if (d.data) {
-                    localStorage.setItem("u", u);
-                    localStorage.setItem("p", p);
-                } else {
-                    window.location.href = "/";
-                }
-            });
-        }
-    </script>
 
     <div class="container mx-auto px-4 py-6">
         <div class="glass-container max-w-7xl mx-auto">
-            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                <div class="flex items-center gap-4 hidden">
-                    <span>Trade Time:</span>
-                    <label class="switch">
-                        <input type="checkbox" id="sw" />
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-                <button class="btn" style="border-color: #dc2626; color: #dc2626; background: linear-gradient(135deg, rgba(220, 38, 38, 0.1), rgba(220, 38, 38, 0.05));" 
-                        onmouseover="this.style.background='#dc2626'; this.style.color='white'; this.style.boxShadow='0 8px 25px rgba(220, 38, 38, 0.3)'; this.style.transform='translateY(-2px)'"
-                        onmouseout="this.style.background='linear-gradient(135deg, rgba(220, 38, 38, 0.1), rgba(220, 38, 38, 0.05))'; this.style.color='#dc2626'; this.style.boxShadow='none'; this.style.transform='translateY(0)'"
-                        onclick="resetDb()">
-                    Reset Database
-                </button>
-            </div>
-
+            <!-- Market Controls - Big Prominent Cards -->
             <div class="mb-6">
-                <label for="revise-prices" class="block mb-2">Revise Prices:</label>
-                <select id="revise-prices" class="w-full sm:w-auto px-4 py-2 rounded-md"></select>
-            </div>
-            
-            <div class="flex items-center gap-4 mb-6 hidden">
-                <span>Make Prices White</span>
-                <label class="switch">
-                    <input type="checkbox" id="white-btn" />
-                    <span class="slider round"></span>
-                </label>
-            </div>
-
-            <!-- Stock Table -->
-            <div class="overflow-hidden mb-8">
-                <div class="glass-container">
-                    <table class="w-full text-left">
-                        <thead>
-                            <tr class="border-b border-white/20">
-                                <th class="px-4 py-3 text-gold-primary font-semibold">Stock Name</th>
-                                <th class="px-4 py-3 text-gold-primary font-semibold">Stock Price</th>
-                                <th class="px-4 py-3 text-gold-primary font-semibold">Set Stock Price</th>
-                            </tr>
-                        </thead>
-                        <tbody id="stocks"></tbody>
-                    </table>
+                <div class="glass-container p-5">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Market</span>
+                            <span id="marketStatusBadge" class="px-4 py-1.5 rounded-full text-sm font-bold" style="background: rgba(16,185,129,0.2); color: #10b981; border: 2px solid rgba(16,185,129,0.4);">ACTIVE</span>
+                            <span id="marketStatusText" class="text-xs text-zinc-500 hidden sm:inline">Trading is enabled</span>
+                        </div>
+                        <div class="flex flex-wrap gap-3">
+                            <button id="marketFreezeBtn" class="btn font-extrabold text-base tracking-wider px-6 py-3" 
+                                    style="border-color: #ef4444; color: #ef4444; background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05)); min-width: 160px;"
+                                    onmouseover="this.style.background='#ef4444'; this.style.color='white'; this.style.boxShadow='0 0 25px rgba(239,68,68,0.5)'; this.style.transform='translateY(-2px)'"
+                                    onmouseout="this.style.background='linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05))'; this.style.color='#ef4444'; this.style.boxShadow='none'; this.style.transform='translateY(0)'"
+                                    onclick="marketFreeze()">
+                                <i data-lucide="pause-circle" class="w-5 h-5 inline-block mr-2"></i>FREEZE
+                            </button>
+                            <button id="marketStartBtn" class="btn font-extrabold text-base tracking-wider px-6 py-3" 
+                                    style="border-color: #10b981; color: #10b981; background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05)); min-width: 160px;"
+                                    onmouseover="this.style.background='#10b981'; this.style.color='white'; this.style.boxShadow='0 0 25px rgba(16,185,129,0.5)'; this.style.transform='translateY(-2px)'"
+                                    onmouseout="this.style.background='linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05))'; this.style.color='#10b981'; this.style.boxShadow='none'; this.style.transform='translateY(0)'"
+                                    onclick="marketStart()">
+                                <i data-lucide="play-circle" class="w-5 h-5 inline-block mr-2"></i>START
+                            </button>
+                            <button class="btn font-semibold px-4 py-3" style="border-color: #dc2626; color: #dc2626; background: linear-gradient(135deg, rgba(220,38,38,0.1), rgba(220,38,38,0.05)); min-width: 100px;" 
+                                    onmouseover="this.style.background='#dc2626'; this.style.color='white'; this.style.boxShadow='0 8px 25px rgba(220,38,38,0.3)'; this.style.transform='translateY(-2px)'"
+                                    onmouseout="this.style.background='linear-gradient(135deg, rgba(220,38,38,0.1), rgba(220,38,38,0.05))'; this.style.color='#dc2626'; this.style.boxShadow='none'; this.style.transform='translateY(0)'"
+                                    onclick="resetDb()">
+                                <i data-lucide="rotate-ccw" class="w-4 h-4 inline-block mr-1"></i>Reset
+                            </button>
+                        </div>
+                    </div>
+                    <div id="freezeSnapshotInfo" class="mt-3 text-xs text-zinc-500 hidden"></div>
                 </div>
             </div>
 
-            <!-- School Table -->
-            <div class="overflow-hidden mb-4">
-                <div class="glass-container">
-                    <table class="w-full text-left">
-                        <thead>
-                            <tr class="border-b border-white/20">
-                                <th class="px-4 py-3 text-gold-primary font-semibold">School Name</th>
-                                <th class="px-4 py-3 text-gold-primary font-semibold">Standby Cash</th>
-                                <th class="px-4 py-3 text-gold-primary font-semibold">Investment Value</th>
-                                <th class="px-4 py-3 text-gold-primary font-semibold">Portfolio Value</th>
-                                <th class="px-4 py-3 text-gold-primary font-semibold">Net Profit/Loss</th>
-                                <th class="px-4 py-3 text-gold-primary font-semibold">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="schools"></tbody>
-                    </table>
+            <!-- Control Tabs -->
+            <div class="flex flex-wrap gap-2 mb-6 border-b border-white/10 pb-3">
+                <button class="tab-btn active-tab" data-tab="prices" onclick="switchTab('prices')">Prices</button>
+                <button class="tab-btn" data-tab="schools" onclick="switchTab('schools')">Teams</button>
+                <button class="tab-btn" data-tab="adjust" onclick="switchTab('adjust')">Price Adjust</button>
+                <button class="tab-btn" data-tab="transfer" onclick="switchTab('transfer')">Transfer</button>
+                <button class="tab-btn" data-tab="scoring" onclick="switchTab('scoring')">Scoring</button>
+                <button class="tab-btn" data-tab="tradelog" onclick="switchTab('tradelog')">Trade Log</button>
+            </div>
+
+            <!-- ========== TAB: Prices ========== -->
+            <div id="tab-prices" class="tab-content">
+                <div class="mb-4">
+                    <label for="revise-prices" class="block mb-2 text-sm font-semibold text-gold-primary">Revise Prices:</label>
+                    <select id="revise-prices" class="w-full sm:w-auto px-4 py-2 rounded-md"></select>
+                </div>
+                <div class="overflow-hidden">
+                    <div class="glass-container">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="border-b border-white/20">
+                                    <th class="px-4 py-3 text-gold-primary font-semibold">Stock Name</th>
+                                    <th class="px-4 py-3 text-gold-primary font-semibold">Stock Price</th>
+                                    <th class="px-4 py-3 text-gold-primary font-semibold">Set Stock Price</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stocks"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== TAB: Schools ========== -->
+            <div id="tab-schools" class="tab-content hidden">
+                <div class="overflow-hidden">
+                    <div class="glass-container">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="border-b border-white/20">
+                                    <th class="px-4 py-3 text-gold-primary font-semibold">School Name</th>
+                                    <th class="px-4 py-3 text-gold-primary font-semibold">Standby Cash</th>
+                                    <th class="px-4 py-3 text-gold-primary font-semibold">Investment Value</th>
+                                    <th class="px-4 py-3 text-gold-primary font-semibold">Portfolio Value</th>
+                                    <th class="px-4 py-3 text-gold-primary font-semibold">Net Profit/Loss</th>
+                                    <th class="px-4 py-3 text-gold-primary font-semibold">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="schools"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== TAB: Price Adjust ========== -->
+            <div id="tab-adjust" class="tab-content hidden">
+                <div class="glass-container p-6">
+                    <h3 class="section-title"><i data-lucide="trending-up" class="w-5 h-5"></i> Update All Prices By Percentage</h3>
+                    <p class="text-sm text-zinc-400 mb-4">Enter a percentage to adjust ALL stock prices. Positive to increase, negative to decrease.</p>
+                    <div class="flex flex-wrap items-end gap-4">
+                        <div class="form-group flex-1 min-w-[200px]">
+                            <label>Percentage Change (%)</label>
+                            <input type="number" id="pctInput" step="0.1" placeholder="e.g., +10 or -5">
+                        </div>
+                        <button class="btn" style="border-color: #f59e0b; color: #f59e0b; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05)); font-weight: 700; padding: 0.875rem 2rem;"
+                                onclick="applyPercentageChange()">Apply</button>
+                    </div>
+                    <div id="pctResult" class="mt-3 text-sm hidden"></div>
+                </div>
+            </div>
+
+            <!-- ========== TAB: Transfer ========== -->
+            <div id="tab-transfer" class="tab-content hidden">
+                <div class="glass-container p-6">
+                    <h3 class="section-title"><i data-lucide="arrow-left-right" class="w-5 h-5"></i> Inter-Team Transfer</h3>
+                    <p class="text-sm text-zinc-400 mb-4">Transfer shares from one team to another at a negotiated price.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="form-group">
+                            <label>From Team</label>
+                            <select id="transferFrom"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>To Team</label>
+                            <select id="transferTo"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Stock</label>
+                            <select id="transferStock"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Quantity</label>
+                            <input type="number" id="transferQty" min="1" placeholder="Number of shares">
+                        </div>
+                        <div class="form-group">
+                            <label>Negotiated Price (per share)</label>
+                            <input type="number" id="transferPrice" step="0.01" placeholder="Price per share">
+                        </div>
+                        <div class="flex items-end">
+                            <button class="btn w-full" style="border-color: #8b5cf6; color: #8b5cf6; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05)); font-weight: 700; padding: 0.875rem;"
+                                    onclick="executeTransfer()">Execute Transfer</button>
+                        </div>
+                    </div>
+                    <div id="transferResult" class="mt-3 text-sm hidden"></div>
+                </div>
+            </div>
+
+            <!-- ========== TAB: Scoring ========== -->
+            <div id="tab-scoring" class="tab-content hidden">
+                <div class="glass-container p-6">
+                    <div class="flex flex-wrap items-center gap-4 mb-6">
+                        <button class="btn" style="border-color: #f59e0b; color: #f59e0b; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05)); font-weight: 700; padding: 1rem 2rem;"
+                                onclick="calculateAndShowScores()">
+                            <i data-lucide="calculator" class="w-5 h-5 inline-block mr-2"></i> Calculate Scores (Preview)
+                        </button>
+                        <span class="text-sm text-zinc-500">|</span>
+                        <button class="btn" style="border-color: #10b981; color: #10b981; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05)); font-weight: 700; padding: 1rem 2rem;"
+                                onclick="showFinalScores()">
+                            <i data-lucide="trophy" class="w-5 h-5 inline-block mr-2"></i> Final Scores
+                        </button>
+                    </div>
+                    <div id="scoringDisplay"></div>
+                </div>
+            </div>
+
+            <!-- ========== TAB: Trade Log ========== -->
+            <div id="tab-tradelog" class="tab-content hidden">
+                <div class="glass-container p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="section-title"><i data-lucide="list" class="w-5 h-5"></i> Trade Log</h3>
+                        <span id="tradeLogCount" class="text-sm text-zinc-400">0 entries</span>
+                    </div>
+                    <div class="overflow-x-auto max-h-[500px] overflow-y-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="border-b border-white/20">
+                                    <th class="px-3 py-2 text-gold-primary font-semibold">Time</th>
+                                    <th class="px-3 py-2 text-gold-primary font-semibold">Type</th>
+                                    <th class="px-3 py-2 text-gold-primary font-semibold">Team</th>
+                                    <th class="px-3 py-2 text-gold-primary font-semibold">Stock</th>
+                                    <th class="px-3 py-2 text-gold-primary font-semibold">Qty</th>
+                                    <th class="px-3 py-2 text-gold-primary font-semibold">Price</th>
+                                    <th class="px-3 py-2 text-gold-primary font-semibold">Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tradeLogBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -775,355 +888,342 @@
     </div>
 
     <script>
+        const params = new URLSearchParams(window.location.search);
+        let u = params.get("u");
+        let p = params.get("p");
+        (function checkAuth() {
+            if (u && p) {
+                localStorage.setItem("u", u);
+                localStorage.setItem("p", p);
+            } else {
+                const storedU = localStorage.getItem("u");
+                const storedP = localStorage.getItem("p");
+                if (storedU && storedP) {
+                    window.location.href = `/admin?u=${storedU}&p=${storedP}`;
+                    return;
+                }
+                u = prompt("Username");
+                p = prompt("Password");
+                if (u && p) {
+                    window.location.href = `/admin?u=${u}&p=${p}`;
+                } else {
+                    window.location.href = "/";
+                }
+            }
+        })();
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active-tab'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active-tab');
+            if (tabId === 'tradelog') loadTradeLog();
+            if (tabId === 'transfer') populateTransferDropdowns();
+        }
+
+        function marketFreeze() {
+            if (!confirm("FREEZE MARKET?\nDisables trading + captures scoring snapshots.")) return;
+            fetch(`/marketFreeze?u=${u}&p=${p}`).then(x=>x.json()).then(r => {
+                if (r.success) {
+                    showNotification('success', 'Market Frozen', 'Trading disabled. Snapshot captured.');
+                    if (r.snapshot && r.snapshot.freezeNumber) {
+                        document.getElementById('freezeSnapshotInfo').textContent = 'Last freeze: #' + r.snapshot.freezeNumber + ' at ' + new Date(r.snapshot.timestamp).toLocaleString();
+                        document.getElementById('freezeSnapshotInfo').classList.remove('hidden');
+                    }
+                    update();
+                } else showNotification('error', 'Failed', r.message || 'Unknown error');
+            }).catch(e => showNotification('error', 'Network Error', e.message));
+        }
+
+        function marketStart() {
+            if (!confirm("START MARKET?\nEnables trading for all teams.")) return;
+            fetch(`/marketStart?u=${u}&p=${p}`).then(x=>x.json()).then(r => {
+                if (r.success) { showNotification('success', 'Market Started', 'Trading enabled.'); update(); }
+                else showNotification('error', 'Failed', r.message || 'Unknown error');
+            }).catch(e => showNotification('error', 'Network Error', e.message));
+        }
+
         document.addEventListener("DOMContentLoaded", function () {
-            var checkbox = document.getElementById("sw");
-            var whiteBtn = document.getElementById("white-btn");
-
-            whiteBtn.addEventListener("change", function () {
-                fetch(`/whitePrices?u=${localStorage.getItem("u")}&p=${localStorage.getItem("p")}`)
-                    .then((x) => x.json())
-                    .then((d) => {
-                        if (d.data !== "success") {
-                            whiteBtn.checked = !whiteBtn.checked;
-                        }
-                    })
-                    .catch((error) => {
-                        console.error("Error toggling white prices:", error);
-                        whiteBtn.checked = !whiteBtn.checked;
-                    });
-            });
-
-            checkbox.addEventListener("change", function () {
-                let value = checkbox.checked ? "true" : "false";
-                fetch(`/setTT?value=${value}&u=${localStorage.getItem("u")}&p=${localStorage.getItem("p")}`)
-                    .then((x) => x.json())
-                    .then((d) => {
-                        if (d.data !== "success") {
-                            checkbox.checked = !checkbox.checked;
-                        }
-                    })
-                    .catch((error) => {
-                        console.error("Error toggling trade time:", error);
-                        checkbox.checked = !checkbox.checked;
-                    });
-            });
+            update();
+            fetchAccountCredentials();
+            connectWebSocket();
+            setTimeout(() => {
+                if (!window.isConnected) { console.log('WebSocket fallback polling'); setInterval(update, 2000); }
+            }, 5000);
         });
 
         function revisePrices(which) {
-            fetch("/data")
-                .then((x) => x.json())
-                .then((db) => {
-                    fetch(`/getAllPrices?u=${localStorage.getItem("u")}&p=${localStorage.getItem("p")}`)
-                        .then((x) => x.json())
-                        .then((allPrices) => {
-                            if (!confirm("Are you sure you want to revise the prices to revision " + which + "?")) return;
-
-                            fetch(`/setAllPrices?u=${localStorage.getItem("u")}&p=${localStorage.getItem("p")}&which=${which}&arr=${JSON.stringify(allPrices[which])}`)
-                                .then((x) => x.json());
-
-                            let succeeded = true;
-                            for (let i = 0; i < allPrices[which].length; ++i) {
-                                fetch(`/setSP?value=${allPrices[which][i]}&u=${localStorage.getItem("u")}&p=${localStorage.getItem("p")}&n=${escape(db.stockprices[i].name)}`)
-                                    .then((x) => x.json())
-                                    .then((d) => {
-                                        if (d.data !== "success") succeeded = false;
-                                    });
-                            }
-
-                            if (!succeeded) {
-                                alert("Failed!");
-                            } else {
-                                alert("Success!");
-                            }
-                        });
+            fetch("/data").then(x=>x.json()).then(db => {
+                fetch(`/getAllPrices?u=${u}&p=${p}`).then(x=>x.json()).then(allPrices => {
+                    if (!confirm("Revise prices to Revision " + which + "?")) return;
+                    fetch(`/setAllPrices?u=${u}&p=${p}&which=${which}&arr=${JSON.stringify(allPrices[which])}`).then(x=>x.json());
+                    let succeeded = true;
+                    for (let i = 0; i < allPrices[which].length; ++i) {
+                        fetch(`/setSP?value=${allPrices[which][i]}&u=${u}&p=${p}&n=${escape(db.stockprices[i].name)}`).then(x=>x.json()).then(d => { if (d.data !== "success") succeeded = false; });
+                    }
+                    setTimeout(() => {
+                        if (succeeded) { showNotification('success', 'Revised', 'Revision ' + which + ' applied'); update(); }
+                        else showNotification('error', 'Failed', 'Some prices failed');
+                    }, 500);
                 });
+            });
         }
 
         function update() {
-            // Use cached data from WebSocket if available, otherwise fetch
-            if (window.currentData && window.isConnected) {
-                updateDisplay(window.currentData);
-            } else {
-                fetch("/data")
-                    .then((x) => x.json())
-                    .then((db) => {
-                        window.currentData = db;
-                        updateDisplay(db);
-                    });
-            }
+            if (window.currentData && window.isConnected) { updateDisplay(window.currentData); }
+            else { fetch("/data").then(x=>x.json()).then(db => { window.currentData = db; updateDisplay(db); }); }
         }
 
         function updateDisplay(db) {
-            document.getElementById("sw").checked = db.tradetime;
-            document.getElementById("white-btn").checked = db.whitePrices;
+            const badge = document.getElementById('marketStatusBadge');
+            const text = document.getElementById('marketStatusText');
+            if (db.tradetime) {
+                badge.textContent = 'ACTIVE'; badge.style.background = 'rgba(16,185,129,0.2)'; badge.style.color = '#10b981'; badge.style.borderColor = 'rgba(16,185,129,0.4)';
+                text.textContent = 'Trading is enabled';
+                document.getElementById('marketFreezeBtn').style.display = '';
+                document.getElementById('marketStartBtn').style.display = '';
+            } else {
+                badge.textContent = 'FROZEN'; badge.style.background = 'rgba(239,68,68,0.2)'; badge.style.color = '#ef4444'; badge.style.borderColor = 'rgba(239,68,68,0.4)';
+                text.textContent = 'Trading is disabled';
+            }
 
-                    let sp = db.stockprices;
-                    let sd = db.schooldata;
-                    let stockHTML = "";
-                    let schoolHTML = "";
+            let sp = db.stockprices;
+            let sd = db.schooldata;
+            let stockHTML = "";
 
-                    for (let i = 0; i < sp.length; i++) {
-                        stockHTML += `<tr class="border-b border-white/10 hover:bg-white/5 transition-colors">
-                            <td class="px-4 py-3 text-zinc-100">${sp[i].name}</td>
-                            <td class="px-4 py-3 text-zinc-100">₹${sp[i].price}</td>
-                            <td class="px-4 py-3">
-                                <button onclick='change("${sp[i].name}")' 
-                                        class='btn-small' 
-                                        style='border: 2px solid #f59e0b; color: #f59e0b; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05)); padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.3s ease; font-weight: 600;'
-                                        onmouseover='this.style.background="#f59e0b"; this.style.color="white"; this.style.transform="translateY(-1px)"; this.style.boxShadow="0 4px 15px rgba(245, 158, 11, 0.3)"'
-                                        onmouseout='this.style.background="linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05))"; this.style.color="#f59e0b"; this.style.transform="translateY(0)"; this.style.boxShadow="none"'>
-                                    Change
-                                </button>
-                            </td>
-                        </tr>`;
-                    }
+            for (let i = 0; i < sp.length; i++) {
+                stockHTML += `<tr class="border-b border-white/10 hover:bg-white/5 transition-colors">
+                    <td class="px-4 py-3 text-zinc-100">${sp[i].name}</td>
+                    <td class="px-4 py-3 text-zinc-100">₹${sp[i].price}</td>
+                    <td class="px-4 py-3">
+                        <button onclick='change("${sp[i].name}")' 
+                                style='border:2px solid #f59e0b;color:#f59e0b;background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(245,158,11,0.05));padding:0.5rem 1rem;border-radius:8px;font-weight:600;'
+                                onmouseover='this.style.background="#f59e0b";this.style.color="white";this.style.transform="translateY(-1px)";this.style.boxShadow="0 4px 15px rgba(245,158,11,0.3)"'
+                                onmouseout='this.style.background="linear-gradient(135deg,rgba(245,158,11,0.1),rgba(245,158,11,0.05))";this.style.color="#f59e0b";this.style.transform="translateY(0)";this.style.boxShadow="none"'>
+                            Change
+                        </button>
+                    </td>
+                </tr>`;
+            }
+            document.getElementById("stocks").innerHTML = stockHTML;
 
-                    // Calculate net profit/loss for each school and sort
-                    sd.forEach((school) => {
-                        let totalStockValue = 0.0;
-                        school.stocks.forEach((stockQty, index) => {
-                            totalStockValue += stockQty * db.stockprices[index].price;
-                        });
-                        school.netProfitLoss = school.cash + totalStockValue - 1000000;
-                    });
+            sd.forEach(school => {
+                let totalStockValue = 0.0;
+                school.stocks.forEach((qty, idx) => { totalStockValue += qty * Number(sp[idx].price); });
+                school.netProfitLoss = school.cash + totalStockValue - 1000000;
+            });
+            sd.sort((a, b) => b.netProfitLoss - a.netProfitLoss);
 
-                    // Sort schools by net profit/loss (descending)
-                    sd.sort((a, b) => b.netProfitLoss - a.netProfitLoss);
+            let schoolHTML = "";
+            sd.forEach(school => {
+                let totalStockValue = 0.0;
+                school.stocks.forEach((qty, idx) => { totalStockValue += qty * Number(sp[idx].lastBoughtPrice || sp[idx].price); });
+                let netProfitLoss = -(1000000 - totalStockValue - school.cash);
+                const profitColor = netProfitLoss < 0 ? '#ef4444' : '#10b981';
+                schoolHTML += `<tr class="border-b border-white/10 hover:bg-white/5 transition-colors">
+                    <td class="px-4 py-3 text-zinc-100 font-medium">${school.schoolcode}</td>
+                    <td class="px-4 py-3 text-zinc-100">₹ ${school.cash.toLocaleString("hi")}</td>
+                    <td class="px-4 py-3 text-zinc-100">₹ ${totalStockValue.toLocaleString("hi")}</td>
+                    <td class="px-4 py-3 text-zinc-100 font-semibold">₹ ${(school.cash + totalStockValue).toLocaleString("hi")}</td>
+                    <td class="px-4 py-3 font-semibold" style="color:${profitColor}">₹ ${netProfitLoss.toLocaleString("hi")==-0?"0":netProfitLoss.toLocaleString("hi")}</td>
+                    <td class="px-4 py-3">
+                        <button onclick='openPortfolioModal("${school.schoolcode}")' 
+                                style='border:2px solid #3b82f6;color:#3b82f6;background:linear-gradient(135deg,rgba(59,130,246,0.1),rgba(59,130,246,0.05));padding:0.5rem 1rem;border-radius:8px;font-weight:600;font-size:0.875rem;'
+                                onmouseover='this.style.background="#3b82f6";this.style.color="white";this.style.transform="translateY(-1px)";this.style.boxShadow="0 4px 15px rgba(59,130,246,0.3)"'
+                                onmouseout='this.style.background="linear-gradient(135deg,rgba(59,130,246,0.1),rgba(59,130,246,0.05))";this.style.color="#3b82f6";this.style.transform="translateY(0)";this.style.boxShadow="none"'>
+                            Change Portfolio
+                        </button>
+                    </td>
+                </tr>`;
+            });
+            document.getElementById("schools").innerHTML = schoolHTML;
 
-                    // Generate school HTML
-                    sd.forEach((school) => {
-                        let totalStockValue = 0.0;
-                        school.stocks.forEach((stockQty, index) => {
-                            totalStockValue += stockQty * db.stockprices[index].lastBoughtPrice;
-                        });
-                        let netProfitLoss = -(1000000-totalStockValue-school.cash);
-                        const profitColor = netProfitLoss < 0 ? '#ef4444' : '#10b981';
-                        schoolHTML += `<tr class="border-b border-white/10 hover:bg-white/5 transition-colors">
-                            <td class="px-4 py-3 text-zinc-100 font-medium">${school.schoolcode}</td>
-                            <td class="px-4 py-3 text-zinc-100">₹ ${school.cash.toLocaleString("hi")}</td>
-                            <td class="px-4 py-3 text-zinc-100">₹ ${totalStockValue.toLocaleString("hi")}</td>
-                            <td class="px-4 py-3 text-zinc-100 font-semibold">₹ ${(school.cash + totalStockValue).toLocaleString("hi")}</td>
-                            <td class="px-4 py-3 font-semibold" style="color: ${profitColor}">₹ ${netProfitLoss.toLocaleString("hi")==-0?"0":netProfitLoss.toLocaleString("hi")}</td>
-                            <td class="px-4 py-3">
-                                <button onclick='openPortfolioModal("${school.schoolcode}")' 
-                                        style='border: 2px solid #3b82f6; color: #3b82f6; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05)); padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.3s ease; font-weight: 600; font-size: 0.875rem;'
-                                        onmouseover='this.style.background="#3b82f6"; this.style.color="white"; this.style.transform="translateY(-1px)"; this.style.boxShadow="0 4px 15px rgba(59, 130, 246, 0.3)"'
-                                        onmouseout='this.style.background="linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05))"; this.style.color="#3b82f6"; this.style.transform="translateY(0)"; this.style.boxShadow="none"'>
-                                    Change Portfolio
-                                </button>
-                            </td>
-                        </tr>`;
-                    });
+            fetch(`/getAllPrices?u=${u}&p=${p}`).then(x=>x.json()).then(allPrices => {
+                const sel = document.getElementById('revise-prices');
+                if (sel && Array.isArray(allPrices)) {
+                    sel.innerHTML = '<option value="">Select Revision</option>';
+                    allPrices.forEach((_, idx) => { sel.innerHTML += `<option value="${idx}">Revision ${idx+1}</option>`; });
+                    sel.onchange = function() { if (this.value !== '') { revisePrices(this.value); this.value = ''; } };
+                }
+            }).catch(()=>{});
 
-                    document.getElementById("stocks").innerHTML = stockHTML;
-                    document.getElementById("schools").innerHTML = schoolHTML;
-
-                    // Populate revise prices dropdown
-                    fetch(`/getAllPrices?u=${localStorage.getItem("u")}&p=${localStorage.getItem("p")}`)
-                        .then((x) => x.json())
-                        .then((allPrices) => {
-                            const reviseSelect = document.getElementById('revise-prices');
-                            if (reviseSelect && Array.isArray(allPrices)) {
-                                reviseSelect.innerHTML = '<option value="">Select Revision</option>';
-                                allPrices.forEach((priceArray, index) => {
-                                    const option = document.createElement('option');
-                                    option.value = index;
-                                    option.textContent = `Revision ${index + 1}`;
-                                    reviseSelect.appendChild(option);
-                                });
-                                
-                                // Add event listener for revision selection
-                                reviseSelect.onchange = function() {
-                                    if (this.value !== '') {
-                                        revisePrices(this.value);
-                                        this.value = ''; // Reset selection
-                                    }
-                                };
-                            }
-                        })
-                        .catch((error) => {
-                            console.error("Error loading price revisions:", error);
-                        });
-
-                    // Store current data globally for modal use
-                    window.currentData = db;
+            window.currentData = db;
         }
 
         function change(stock) {
-            const newValue = prompt("The stock value for " + stock + " should be:");
-            if (newValue === null || newValue.trim() === '') {
-                showNotification('warning', 'Operation Cancelled', 'Price change was cancelled');
-                return;
-            }
-            
-            const v = parseFloat(newValue);
-            if (isNaN(v) || v <= 0) {
-                showNotification('error', 'Invalid Price', 'Please enter a valid positive number');
-                return;
-            }
-            
-            fetch(`/setSP?value=${v}&u=${localStorage.getItem("u")}&p=${localStorage.getItem("p")}&n=${escape(stock)}`)
-                .then((x) => x.json())
-                .then((d) => {
-                    if (d.data === "success") {
-                        showNotification('success', 'Price Updated', `Successfully updated ${stock} price to ₹${v}`);
-                        update(); // Refresh the data
-                    } else {
-                        showNotification('error', 'Update Failed', 'Failed to update stock price');
-                    }
-                })
-                .catch((error) => {
-                    console.error("Error changing stock price:", error);
-                    showNotification('error', 'Network Error', 'Error occurred while changing stock price');
-                });
+            const v = prompt("New price for " + stock + ":");
+            if (!v || v.trim() === '') return;
+            const val = parseFloat(v);
+            if (isNaN(val) || val <= 0) { showNotification('error', 'Invalid', 'Enter positive number'); return; }
+            fetch(`/setSP?value=${val}&u=${u}&p=${p}&n=${escape(stock)}`).then(x=>x.json()).then(d => {
+                if (d.data === "success") { showNotification('success', 'Updated', stock + ' to ₹' + val); update(); }
+                else showNotification('error', 'Failed', 'Could not update');
+            });
         }
 
         function resetDb() {
-            if (confirm("Are you sure you want to reset the database? This action cannot be undone.")) {
-                fetch(`/resetDB?u=${localStorage.getItem("u")}&p=${localStorage.getItem("p")}`)
-                    .then((x) => x.json())
-                    .then((d) => {
-                        if (d.data === "success") {
-                            showNotification('success', 'Database Reset', 'Database has been successfully reset to initial state');
-                            update(); // Refresh the data
-                        } else {
-                            showNotification('error', 'Reset Failed', 'Failed to reset database');
-                        }
-                    })
-                    .catch((error) => {
-                        console.error("Error resetting database:", error);
-                        showNotification('error', 'Network Error', 'Error occurred while resetting database');
-                    });
+            if (confirm("Reset database? Cannot be undone.")) {
+                fetch(`/resetDB?u=${u}&p=${p}`).then(x=>x.json()).then(d => {
+                    if (d.data === "success") { showNotification('success', 'Reset', 'Database reset'); update(); }
+                    else showNotification('error', 'Failed', 'Could not reset');
+                });
             }
         }
 
-                // Initialize dropdown and start updates when page loads
-        document.addEventListener("DOMContentLoaded", function() {
-            // First call update to populate the page
-            update();
-            
-            // Fetch account credentials for portfolio management
-            fetchAccountCredentials();
-            
-            // Connect to WebSocket for real-time updates
-            connectWebSocket();
-            
-            // Fallback: if WebSocket fails, use polling
-            setTimeout(() => {
-                if (!window.isConnected) {
-                    console.log('WebSocket connection failed, falling back to polling');
-                    setInterval(update, 2000);
+        function applyPercentageChange() {
+            const pct = parseFloat(document.getElementById('pctInput').value);
+            if (isNaN(pct) || pct === 0) { showNotification('error', 'Invalid', 'Enter non-zero percentage'); return; }
+            if (!confirm(`Apply ${pct > 0 ? '+' : ''}${pct}% to ALL prices?`)) return;
+            fetch(`/updatePricesByPercentage?u=${u}&p=${p}&percent=${pct}`).then(x=>x.json()).then(r => {
+                if (r.success) { showNotification('success', 'Prices Updated', `All prices changed by ${pct}%`); update(); }
+                else showNotification('error', 'Failed', r.message);
+            });
+        }
+
+        function populateTransferDropdowns() {
+            if (!window.currentData) return;
+            const sp = window.currentData.stockprices;
+            const sd = window.currentData.schooldata;
+            const from = document.getElementById('transferFrom');
+            const to = document.getElementById('transferTo');
+            const stock = document.getElementById('transferStock');
+            from.innerHTML = ''; to.innerHTML = ''; stock.innerHTML = '';
+            sd.forEach(s => {
+                from.innerHTML += `<option value="${s.schoolcode}">${s.schoolcode}</option>`;
+                to.innerHTML += `<option value="${s.schoolcode}">${s.schoolcode}</option>`;
+            });
+            sp.forEach(s => { stock.innerHTML += `<option value="${s.name}">${s.name} - ₹${s.price}</option>`; });
+        }
+
+        function executeTransfer() {
+            const from = document.getElementById('transferFrom').value;
+            const to = document.getElementById('transferTo').value;
+            const stock = document.getElementById('transferStock').value;
+            const qty = parseInt(document.getElementById('transferQty').value);
+            const price = parseFloat(document.getElementById('transferPrice').value);
+            if (!from || !to || !stock || !qty || qty <= 0 || !price || price <= 0) {
+                showNotification('error', 'Incomplete', 'Fill all fields'); return;
+            }
+            if (from === to) { showNotification('error', 'Invalid', 'Teams must differ'); return; }
+            if (!confirm(`Transfer ${qty} shares of ${stock} from ${from} to ${to} at ₹${price}?`)) return;
+            fetch(`/transferShares?u=${u}&p=${p}&from=${from}&to=${to}&stock=${escape(stock)}&qty=${qty}&price=${price}`)
+                .then(x=>x.json()).then(r => {
+                    if (r.success) { showNotification('success', 'Transfer Done', `${qty} ${stock} shares moved`); update(); }
+                    else showNotification('error', 'Failed', r.message);
+                });
+        }
+
+        function calculateAndShowScores() {
+            fetch('/calculateScores').then(x=>x.json()).then(data => {
+                if (!data.teams) { showNotification('error', 'Error', 'No data'); return; }
+                displayScoringResults(data.teams, 'Preview Scores');
+            });
+        }
+
+        function showFinalScores() {
+            fetch('/getFinalScores').then(x=>x.json()).then(data => {
+                if (!data || data.length === 0) {
+                    document.getElementById('scoringDisplay').innerHTML = '<div class="text-center py-8 text-zinc-400">No freeze scores recorded yet. Freeze the market first.</div>';
+                    return;
                 }
-            }, 5000);
-            
+                let html = '<h4 class="text-lg font-bold text-gold-primary mb-4"><i data-lucide="trophy" class="w-5 h-5 inline-block mr-2"></i> Final Leaderboard (Avg of all Freeze Scores)</h4>';
+                html += '<table class="w-full text-left"><thead><tr class="border-b border-white/20"><th class="px-3 py-2 text-gold-primary">Rank</th><th class="px-3 py-2 text-gold-primary">Team</th><th class="px-3 py-2 text-gold-primary">Scores</th><th class="px-3 py-2 text-gold-primary">Average</th></tr></thead><tbody>';
+                data.forEach(t => {
+                    const medal = t.rank === 1 ? '🥇' : t.rank === 2 ? '🥈' : t.rank === 3 ? '🥉' : '';
+                    html += `<tr class="border-b border-white/10 hover:bg-white/5"><td class="px-3 py-2 font-bold">${medal} ${t.rank}</td><td class="px-3 py-2 font-medium">${t.team}</td><td class="px-3 py-2">${t.scores.join(', ')}</td><td class="px-3 py-2 font-bold text-gold-primary">${t.average}</td></tr>`;
+                });
+                html += '</tbody></table>';
+                document.getElementById('scoringDisplay').innerHTML = html;
+                lucide.createIcons();
+            });
+        }
 
-        });
+        function displayScoringResults(teams, title) {
+            let html = `<h4 class="text-lg font-bold text-gold-primary mb-4">${title}</h4>`;
+            html += '<div class="mb-6"><h5 class="text-sm font-semibold text-zinc-300 mb-2">Portfolio Value Ranking (out of 55)</h5>';
+            html += '<table class="w-full text-left text-sm"><thead><tr class="border-b border-white/20"><th class="px-2 py-1 text-gold-primary">Rank</th><th class="px-2 py-1 text-gold-primary">Team</th><th class="px-2 py-1 text-gold-primary">Folio Value</th><th class="px-2 py-1 text-gold-primary">Score (out of 55)</th></tr></thead><tbody>';
+            teams.sort((a, b) => b.folioValue - a.folioValue).forEach(t => {
+                html += `<tr class="border-b border-white/10"><td class="px-2 py-1">${t.rank}</td><td class="px-2 py-1 font-medium">${t.team}</td><td class="px-2 py-1">₹${t.folioValue.toLocaleString("hi")}</td><td class="px-2 py-1 font-bold">${t.portfolioValueScore.toFixed(2)}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
 
-        // WebSocket connection for admin panel
+            html += '<div class="space-y-4">';
+            teams.forEach(t => {
+                html += `<div class="glass-container p-4 rounded-lg">
+                    <h5 class="font-bold text-gold-primary mb-2">${t.team} <span class="text-white">(${t.freezeScore.toFixed(2)})</span></h5>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                        <div><span class="text-zinc-400">Diversification:</span> ${t.diversification.score}/5 (${t.diversification.sectorsHeld} sectors)</div>
+                        <div><span class="text-zinc-400">Concentration:</span> ${t.concentration.score}/5 (largest: ${t.concentration.largestHoldingPct.toFixed(1)}%)</div>
+                        <div><span class="text-zinc-400">Risk:</span> ${t.risk.score}/10 (weighted: ${t.risk.weightedRisk.toFixed(2)})</div>
+                    </div>
+                </div>`;
+            });
+            html += '</div>';
+            document.getElementById('scoringDisplay').innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function loadTradeLog() {
+            fetch('/getTradeLog').then(x=>x.json()).then(log => {
+                document.getElementById('tradeLogCount').textContent = log.length + ' entries';
+                let html = '';
+                log.slice().reverse().forEach(e => {
+                    const t = new Date(e.timestamp).toLocaleTimeString();
+                    const d = e.type === 'buy' ? 'Purchased' : e.type === 'sell' ? 'Sold' : e.type === 'transfer' ? 'Transferred' : e.type === 'user_trade' ? 'User Trade' : e.type;
+                    html += `<tr class="border-b border-white/10 hover:bg-white/5"><td class="px-3 py-2 text-xs whitespace-nowrap">${t}</td><td class="px-3 py-2"><span class="px-2 py-0.5 rounded text-xs font-semibold ${e.type === 'buy' ? 'bg-green-900 text-green-300' : e.type === 'sell' ? 'bg-red-900 text-red-300' : 'bg-purple-900 text-purple-300'}">${d}</span></td><td class="px-3 py-2">${e.school || e.fromSchool || '-'}</td><td class="px-3 py-2">${e.stockName || '-'}</td><td class="px-3 py-2">${e.quantity || '-'}</td><td class="px-3 py-2">₹${e.price || '-'}</td><td class="px-3 py-2 text-xs">${e.toSchool ? 'to ' + e.toSchool : ''}</td></tr>`;
+                });
+                document.getElementById('tradeLogBody').innerHTML = html;
+            });
+        }
+
         let adminWs = null;
         window.isConnected = false;
-
-        function connectWebSocket() {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}`;
-            
-            console.log('Admin connecting to WebSocket:', wsUrl);
-            
-            adminWs = new WebSocket(wsUrl);
-
-            adminWs.onopen = function() {
-                console.log('Admin WebSocket connected');
-                window.isConnected = true;
-            };
-
-            adminWs.onmessage = function(event) {
-                try {
-                    const message = JSON.parse(event.data);
-                    if (message.type === 'data' && message.payload) {
-                        updateWithData(message.payload);
-                    }
-                } catch (error) {
-                    console.error('Error parsing WebSocket message:', error);
-                }
-            };
-
-            adminWs.onclose = function() {
-                console.log('Admin WebSocket disconnected');
-                window.isConnected = false;
-                
-                // Attempt to reconnect every 5 seconds
-                setTimeout(() => {
-                    console.log('Admin attempting to reconnect...');
-                    connectWebSocket();
-                }, 5000);
-            };
-
-            adminWs.onerror = function(error) {
-                console.error('Admin WebSocket error:', error);
-                window.isConnected = false;
-            };
-        }
-
-        function updateWithData(data) {
-            window.currentData = data;
-            update();
-        }
-
-        // Modal Functions
         let currentSchool = null;
         let accountCredentials = {};
 
-        // Fetch account credentials when page loads
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            adminWs = new WebSocket(`${protocol}//${window.location.host}`);
+            adminWs.onopen = function() { window.isConnected = true; };
+            adminWs.onmessage = function(event) {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === 'data' && msg.payload) { window.currentData = msg.payload; update(); }
+                } catch(e) {}
+            };
+            adminWs.onclose = function() {
+                window.isConnected = false;
+                setTimeout(() => connectWebSocket(), 5000);
+            };
+            adminWs.onerror = function() { window.isConnected = false; };
+        }
+
         function fetchAccountCredentials() {
-            fetch(`/getAllAccounts?u=${localStorage.getItem("u")}&p=${localStorage.getItem("p")}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data !== 'false') {
-                        // Store credentials for easy lookup
-                        data.forEach(account => {
-                            accountCredentials[account.username] = account.password;
-                        });
-                        console.log('Account credentials loaded successfully');
-                    } else {
-                        console.error('Failed to fetch account credentials');
-                        alert('Failed to load account credentials. Portfolio management may not work.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching account credentials:', error);
-                    alert('Error loading account credentials. Portfolio management may not work.');
-                });
+            fetch(`/getAllAccounts?u=${u}&p=${p}`).then(res => res.json()).then(data => {
+                if (data && data !== 'false') {
+                    data.forEach(acc => { accountCredentials[acc.username] = acc.password; });
+                } else {
+                    alert('Failed to load account credentials. Portfolio management may not work.');
+                }
+            }).catch(() => alert('Error loading account credentials.'));
         }
 
         function openPortfolioModal(schoolCode) {
             currentSchool = schoolCode;
             const modal = document.getElementById('portfolioModal');
             const schoolData = window.currentData.schooldata.find(s => s.schoolcode === schoolCode);
-            
-            if (!schoolData) {
-                alert('School data not found');
-                return;
-            }
-
-            // Update modal content
+            if (!schoolData) { alert('School data not found'); return; }
             document.getElementById('modalAccountInfo').textContent = schoolCode;
             document.getElementById('modalCashInfo').textContent = `₹ ${schoolData.cash.toLocaleString("hi")}`;
-            
-            // Populate stock dropdown
             const stockSelect = document.getElementById('stockSelect');
             stockSelect.innerHTML = '<option value="">-- Choose a stock --</option>';
             window.currentData.stockprices.forEach((stock, index) => {
                 stockSelect.innerHTML += `<option value="${index}">${stock.name} - ₹${stock.price.toLocaleString("hi")}</option>`;
             });
-
-            // Update current holdings
             updateCurrentHoldings();
-            
-            // Reset form
             document.getElementById('quantityInput').value = '';
             document.querySelectorAll('input[name="action"]').forEach(radio => radio.checked = false);
             document.querySelectorAll('.action-btn').forEach(btn => btn.classList.remove('active'));
-            
             modal.style.display = 'block';
         }
 
@@ -1132,238 +1232,75 @@
             currentSchool = null;
         }
 
-        // New action selection function for the redesigned buttons
         function selectNewAction(action) {
-            // Remove active class from all action buttons
             document.querySelectorAll('.action-btn').forEach(btn => btn.classList.remove('active'));
-            
-            // Add active class to the selected button
             document.querySelector(`.${action}-action-btn`).classList.add('active');
-            
-            // Set the radio button
-            document.getElementById(action + 'Radio').checked = true;
-        }
-
-        function selectAction(action) {
-            document.querySelectorAll('.radio-option').forEach(option => option.classList.remove('selected'));
-            document.querySelector(`.radio-option.${action}`).classList.add('selected');
             document.getElementById(action + 'Radio').checked = true;
         }
 
         function updateCurrentHoldings() {
             if (!currentSchool || !window.currentData) return;
-            
             const schoolData = window.currentData.schooldata.find(s => s.schoolcode === currentSchool);
-            const holdingsDiv = document.getElementById('currentHoldings');
-            
-            let holdingsHTML = '';
+            let html = '';
             schoolData.stocks.forEach((quantity, index) => {
                 if (quantity > 0) {
                     const stock = window.currentData.stockprices[index];
-                    holdingsHTML += `<div>${stock.name}: ${quantity} shares (₹${(stock.price * quantity).toLocaleString("hi")})</div>`;
+                    html += `<div>${stock.name}: ${quantity} shares (₹${(stock.price * quantity).toLocaleString("hi")})</div>`;
                 }
             });
-            
-            if (holdingsHTML === '') {
-                holdingsHTML = '<div class="text-gray-500">No current holdings</div>';
-            }
-            
-            holdingsDiv.innerHTML = holdingsHTML;
+            document.getElementById('currentHoldings').innerHTML = html || '<div class="text-gray-500">No current holdings</div>';
         }
 
-        // Notification Functions
         function showNotification(type, title, message) {
             const container = document.getElementById('notification-container');
+            const icons = { success: 'check-circle', error: 'x-circle', warning: 'alert-triangle' };
             const notification = document.createElement('div');
-            
-            const icons = {
-                success: 'check-circle',
-                error: 'x-circle',
-                warning: 'alert-triangle'
-            };
-            
             notification.className = `notification ${type}`;
             notification.innerHTML = `
                 <div class="notification-header">
-                    <div class="notification-title">
-                        <i data-lucide="${icons[type]}" class="w-4 h-4"></i>
-                        <span>${title}</span>
-                    </div>
-                    <button class="notification-close" onclick="removeNotification(this)">
-                        <i data-lucide="x" class="w-4 h-4"></i>
-                    </button>
+                    <div class="notification-title"><i data-lucide="${icons[type]}" class="w-4 h-4"></i><span>${title}</span></div>
+                    <button class="notification-close" onclick="this.closest('.notification').classList.add('removing');setTimeout(()=>this.closest('.notification').remove(),400)"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
-                <div class="notification-body">
-                    ${message}
-                </div>
-            `;
-            
+                <div class="notification-body">${message}</div>`;
             container.appendChild(notification);
-            
-            // Re-initialize icons for the new notification
             lucide.createIcons();
-            
-            // Auto-remove after 8 seconds
-            setTimeout(() => {
-                removeNotification(notification.querySelector('.notification-close'));
-            }, 8000);
+            setTimeout(() => { notification.classList.add('removing'); setTimeout(() => notification.remove(), 400); }, 8000);
         }
 
-        function removeNotification(closeButton) {
-            const notification = closeButton.closest('.notification');
-            notification.classList.add('removing');
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 400);
-        }
-
-        async function executeTransaction() {
+        function executeTransaction() {
             const action = document.querySelector('input[name="action"]:checked');
             const stockIndex = document.getElementById('stockSelect').value;
             const quantity = parseInt(document.getElementById('quantityInput').value);
-
-            let res = await fetch("/data");
-            let db = await res.json();
-            
-            if (!action) {
-                showNotification('error', 'Selection Required', 'Please select Buy or Sell');
-                closeModal();
-                return;
-            }
-            
-            if (!stockIndex || stockIndex === '') {
-                showNotification('error', 'Stock Required', 'Please select a stock');
-                closeModal();
-                return;
-            }
-            
-            if (!quantity || quantity <= 0) {
-                showNotification('error', 'Invalid Quantity', 'Please enter a valid quantity greater than 0');
-                closeModal();
-                return;
-            }
-
-            // Check if we have the account credentials
-            if (!accountCredentials[currentSchool]) {
-                showNotification('error', 'Authentication Error', 'Account credentials not found. Please refresh the page and try again.');
-                closeModal();
-                return;
-            }
+            if (!action) { showNotification('error', 'Selection', 'Select Buy or Sell'); closeModal(); return; }
+            if (!stockIndex || stockIndex === '') { showNotification('error', 'Stock', 'Select a stock'); closeModal(); return; }
+            if (!quantity || quantity <= 0) { showNotification('error', 'Quantity', 'Enter valid quantity'); closeModal(); return; }
+            if (!accountCredentials[currentSchool]) { showNotification('error', 'Auth', 'Credentials not found'); closeModal(); return; }
 
             const stock = window.currentData.stockprices[stockIndex];
             const schoolData = window.currentData.schooldata.find(s => s.schoolcode === currentSchool);
-            
-            // Use real account credentials for authentication
             const realAuth = currentSchool + '_' + accountCredentials[currentSchool];
 
-            // Check available volume for buy transactions
             if (action.value === 'buy') {
                 const availableVolume = stock.totalStock - (stock.stocksbought || 0);
-                if (quantity > availableVolume) {
-                    showNotification('error', 'Insufficient Volume', 
-                        `Only ${availableVolume} shares available for purchase. Cannot buy ${quantity} shares.`);
-                    closeModal();
-                    return;
-                }
+                if (quantity > availableVolume) { showNotification('error', 'Volume', `Only ${availableVolume} available`); closeModal(); return; }
             }
-
-            // Check owned stocks for sell transactions
             if (action.value === 'sell' && schoolData.stocks[stockIndex] < quantity) {
-                showNotification('error', 'Insufficient Holdings', 
-                    `You only own ${schoolData.stocks[stockIndex]} shares. Cannot sell ${quantity} shares.`);
-                closeModal();
-                return;
+                showNotification('error', 'Holdings', `You own ${schoolData.stocks[stockIndex]}`); closeModal(); return;
             }
 
             const endpoint = action.value === 'buy' ? '/buyStock' : '/sellStock';
-            const url = `${endpoint}?school=${encodeURIComponent(realAuth)}&stock=${encodeURIComponent(stock.name)}&n=${quantity}`;
-            
-            // Show confirmation
             const actionText = action.value === 'buy' ? 'buy' : 'sell';
-            const totalCost = stock.price * quantity;
-            const confirmMessage = `${actionText.toUpperCase()} ${quantity} shares of ${stock.name} for ₹${totalCost.toLocaleString("hi")}?`;
-            
-            if (!confirm(confirmMessage)) {
-                return;
-            }
+            if (!confirm(`${actionText.toUpperCase()} ${quantity} of ${stock.name} for ₹${(stock.price * quantity).toLocaleString("hi")}?`)) return;
 
-            // Show loading notification
-            const loadingNotification = document.createElement('div');
-            loadingNotification.className = 'notification warning';
-            loadingNotification.innerHTML = `
-                <div class="notification-header">
-                    <div class="notification-title">
-                        <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
-                        <span>Processing Transaction</span>
-                    </div>
-                </div>
-                <div class="notification-body">
-                    ${actionText === 'buy' ? 'Purchasing' : 'Selling'} ${quantity} shares of ${stock.name}...
-                </div>
-            `;
-            document.getElementById('notification-container').appendChild(loadingNotification);
-            lucide.createIcons();
-
-            fetch(url)
-                .then(res => res.json())
-                .then(data => {
-                    // Remove loading notification
-                    loadingNotification.remove();
-                    
-                    // Handle new response format
-                    if (data.success === false) {
-                        showNotification('error', 'Transaction Failed', data.message || 'Unknown error occurred');
-                        closeModal();
-                    } else if (data.success === true) {
-                        const successMessage = `${actionText === 'buy' ? 'Purchased' : 'Sold'} ${quantity} shares of ${stock.name}`;
-                        showNotification('success', 'Transaction Successful', successMessage);
-                        updateCurrentHoldings();
-                        // Refresh the main page data
-                        update();
-                        // Close the modal on successful transaction
-                        closeModal();
-                    } else {
-                        // Handle legacy response format (fallback)
-                        if (data.error) {
-                            showNotification('error', 'Transaction Failed', data.error);
-                            closeModal();
-                        } else {
-                            // For legacy format, extract the actual stock count
-                            const newQuantity = typeof data.stocks === 'number' ? data.stocks : (data.stocks || data.stocks || 'Unknown');
-                            const successMessage = `${actionText === 'buy' ? 'Purchased' : 'Sold'} ${quantity} shares of ${stock.name}.`;
-                            showNotification('success', 'Transaction Successful', successMessage);
-                            updateCurrentHoldings();
-                            update();
-                            closeModal();
-                        }
-                    }
-                })
-                .catch(error => {
-                    // Remove loading notification
-                    loadingNotification.remove();
-                    console.error('Transaction error:', error);
-                    showNotification('error', 'Network Error', 'Transaction failed due to network error. Please try again.');
-                    closeModal();
-                });
+            fetch(`${endpoint}?school=${encodeURIComponent(realAuth)}&stock=${encodeURIComponent(stock.name)}&n=${quantity}`)
+                .then(res => res.json()).then(data => {
+                    if (data.success === false) { showNotification('error', 'Failed', data.message); closeModal(); }
+                    else { showNotification('success', 'Done', `${actionText} ${quantity} ${stock.name}`); update(); closeModal(); }
+                }).catch(() => { showNotification('error', 'Network', 'Transaction failed'); closeModal(); });
         }
 
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('portfolioModal');
-            if (event.target === modal) {
-                closeModal();
-            }
-        }
-
-        // Close modal when pressing Escape
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                closeModal();
-            }
-        });
-
+        window.onclick = function(event) { const m = document.getElementById('portfolioModal'); if (event.target === m) closeModal(); };
+        document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
         document.querySelector('.close').onclick = closeModal;
     </script>
 </body>

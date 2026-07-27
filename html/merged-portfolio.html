@@ -426,6 +426,136 @@
       display: none;
     }
 
+    .trade-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 0.85rem;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    .trade-tab {
+      flex: 1;
+      padding: 0.55rem 0.5rem;
+      text-align: center;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 700;
+      background: rgba(15, 23, 42, 0.65);
+      color: var(--text-muted);
+      border: none;
+      transition: all 0.2s ease;
+    }
+
+    .trade-tab.active {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--gold-primary);
+      box-shadow: inset 0 -2px 0 var(--gold-primary);
+    }
+
+    .trade-tab:hover:not(.active) {
+      color: var(--text-secondary);
+      background: rgba(30, 41, 59, 0.65);
+    }
+
+    .trade-offer-card {
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .trade-offer-card:hover {
+      border-color: var(--gold-primary);
+    }
+
+    .trade-offer-card .offer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.4rem;
+    }
+
+    .trade-offer-card .offer-team {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--gold-primary);
+    }
+
+    .trade-offer-card .offer-status {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 20px;
+      text-transform: uppercase;
+    }
+
+    .offer-status.pending {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--gold-primary);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .offer-status.accepted {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .offer-status.rejected {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .trade-offer-card .offer-details {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .trade-offer-card .offer-accept-btn {
+      margin-top: 0.5rem;
+      width: 100%;
+      padding: 0.45rem;
+      border-radius: 8px;
+      border: 1px solid var(--success);
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      font-weight: 700;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .trade-offer-card .offer-accept-btn:hover {
+      background: rgba(16, 185, 129, 0.3);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+    }
+
+    .trade-offer-card .offer-accept-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .trade-offers-empty {
+      text-align: center;
+      padding: 1.5rem 0.5rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .trade-tab-content {
+      display: none;
+    }
+
+    .trade-tab-content.active {
+      display: block;
+    }
+
     .modal {
       display: none;
       position: fixed;
@@ -635,7 +765,11 @@
   </footer>
 
   <div class="container mx-auto px-4 py-2">
-    <div class="mb-3 flex justify-end">
+    <div class="mb-3 flex justify-end gap-2">
+      <button type="button" onclick="openTradeOffersModal()" class="hover-lift inline-flex items-center gap-2 rounded-lg border border-slate-500 bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 hover:border-amber-400 hover:text-amber-300">
+        <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+        Trade Offers
+      </button>
       <button type="button" onclick="openPortfolioModal()" class="hover-lift inline-flex items-center gap-2 rounded-lg border border-slate-500 bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 hover:border-amber-400 hover:text-amber-300">
         <i data-lucide="briefcase" class="w-4 h-4"></i>
         Manage Portfolio
@@ -777,6 +911,67 @@
       <div class="btn-group">
         <button class="modal-btn secondary" type="button" onclick="closePortfolioModal()">Cancel</button>
         <button class="modal-btn primary" type="button" onclick="executeModalTransaction()">Execute Transaction</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tradeOffersModal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="tradeModalCloseButton">&times;</span>
+      <h2 class="text-xl font-bold mb-3">Trade Offers</h2>
+
+      <div class="trade-tabs">
+        <div class="trade-tab active" onclick="switchTradeTab('send')" id="tradeTabSend">Send Offer</div>
+        <div class="trade-tab" onclick="switchTradeTab('view')" id="tradeTabView">My Offers</div>
+      </div>
+
+      <div id="tradeTabContentSend" class="trade-tab-content active">
+        <div class="form-group">
+          <label for="tradeStockSelect">Select Stock</label>
+          <select id="tradeStockSelect">
+            <option value="">-- Choose a stock --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="tradeTeamSelect">Target Team</label>
+          <select id="tradeTeamSelect">
+            <option value="">-- Choose a team --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="tradeQtyInput">Quantity</label>
+          <input type="number" id="tradeQtyInput" min="1" placeholder="Number of shares">
+        </div>
+
+        <div class="form-group">
+          <label for="tradePriceInput">Price per Share (Rs)</label>
+          <input type="number" id="tradePriceInput" min="1" step="0.01" placeholder="Offer price per share">
+        </div>
+
+        <div class="form-group">
+          <label>Your Holdings</label>
+          <div id="tradeCurrentHoldings" class="text-sm" style="color: var(--text-secondary);"></div>
+        </div>
+
+        <div id="tradeSendStatus" class="modal-status"></div>
+
+        <div class="btn-group">
+          <button class="modal-btn secondary" type="button" onclick="closeTradeOffersModal()">Cancel</button>
+          <button class="modal-btn primary" type="button" onclick="sendTradeOffer()">Send Offer</button>
+        </div>
+      </div>
+
+      <div id="tradeTabContentView" class="trade-tab-content">
+        <div id="tradeOffersList">
+          <div class="trade-offers-empty">Loading offers...</div>
+        </div>
+        <div id="tradeViewStatus" class="modal-status"></div>
+        <div class="btn-group" style="margin-top: 0.5rem;">
+          <button class="modal-btn secondary" type="button" onclick="closeTradeOffersModal()">Close</button>
+          <button class="modal-btn primary" type="button" onclick="loadMyTradeOffers()">Refresh</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2198,6 +2393,273 @@
       }
     }
 
+    // === Trade Offers System ===
+    let lastTradeOfferTime = 0;
+    const TRADE_COOLDOWN_MS = 60000;
+    const MAX_TRADE_OFFERS = 5;
+    let mySentOffersCount = 0;
+
+    function setTradeStatus(msg, tone, elementId) {
+      const el = document.getElementById(elementId || 'tradeSendStatus');
+      if (!el) return;
+      el.textContent = msg || '';
+      if (tone === 'error') el.style.color = 'var(--danger)';
+      else if (tone === 'success') el.style.color = 'var(--success)';
+      else el.style.color = 'var(--text-muted)';
+    }
+
+    function openTradeOffersModal() {
+      const modal = document.getElementById('tradeOffersModal');
+      const token = getSSIDToken();
+      if (!token || !token.includes('_')) {
+        alert('Session expired. Please login again.');
+        return;
+      }
+
+      const db = window.latestData;
+      if (!db || !db.schooldata || !db.stockprices) {
+        alert('Data still loading. Please try again.');
+        return;
+      }
+
+      const mySchoolCode = getSchoolCodeFromToken();
+
+      // Populate stock select
+      const stockSelect = document.getElementById('tradeStockSelect');
+      stockSelect.innerHTML = '<option value="">-- Choose a stock --</option>';
+      db.stockprices.forEach((stock, index) => {
+        stockSelect.innerHTML += '<option value="' + index + '">' + stock.name + ' - Rs ' + Number(stock.price).toLocaleString("hi") + '</option>';
+      });
+
+      // Populate team select (exclude self)
+      const teamSelect = document.getElementById('tradeTeamSelect');
+      teamSelect.innerHTML = '<option value="">-- Choose a team --</option>';
+      db.schooldata.forEach((school) => {
+        if (school.schoolcode !== mySchoolCode) {
+          teamSelect.innerHTML += '<option value="' + school.schoolcode + '">' + school.schoolcode + '</option>';
+        }
+      });
+
+      document.getElementById('tradeQtyInput').value = '';
+      document.getElementById('tradePriceInput').value = '';
+
+      // Show current holdings
+      const schoolData = db.schooldata.find(s => s.schoolcode === mySchoolCode);
+      const holdingsDiv = document.getElementById('tradeCurrentHoldings');
+      if (schoolData) {
+        let html = '';
+        schoolData.stocks.forEach((qty, i) => {
+          if (qty > 0) {
+            html += '<div>' + db.stockprices[i].name + ': ' + qty + ' shares</div>';
+          }
+        });
+        holdingsDiv.innerHTML = html || '<div style="color: var(--text-muted);">No holdings</div>';
+      }
+
+      setTradeStatus('', '');
+      switchTradeTab('send');
+      modal.style.display = 'block';
+      mySentOffersCount = 0;
+      loadMyTradeOffers();
+    }
+
+    function closeTradeOffersModal() {
+      document.getElementById('tradeOffersModal').style.display = 'none';
+      setTradeStatus('', '');
+    }
+
+    function switchTradeTab(tab) {
+      document.querySelectorAll('.trade-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.trade-tab-content').forEach(c => c.classList.remove('active'));
+
+      if (tab === 'send') {
+        document.getElementById('tradeTabSend').classList.add('active');
+        document.getElementById('tradeTabContentSend').classList.add('active');
+      } else {
+        document.getElementById('tradeTabView').classList.add('active');
+        document.getElementById('tradeTabContentView').classList.add('active');
+        loadMyTradeOffers();
+      }
+    }
+
+    async function sendTradeOffer() {
+      const token = getSSIDToken();
+      if (!token || !token.includes('_')) {
+        setTradeStatus('Session expired. Please login again.', 'error');
+        return;
+      }
+
+      const stockIndex = parseInt(document.getElementById('tradeStockSelect').value, 10);
+      const targetTeam = document.getElementById('tradeTeamSelect').value;
+      const qty = parseInt(document.getElementById('tradeQtyInput').value, 10);
+      const price = parseFloat(document.getElementById('tradePriceInput').value);
+
+      if (!Number.isInteger(stockIndex) || stockIndex < 0) {
+        setTradeStatus('Please select a stock.', 'error');
+        return;
+      }
+      if (!targetTeam) {
+        setTradeStatus('Please select a target team.', 'error');
+        return;
+      }
+      if (!qty || qty <= 0) {
+        setTradeStatus('Please enter a valid quantity.', 'error');
+        return;
+      }
+      if (!price || price <= 0) {
+        setTradeStatus('Please enter a valid price.', 'error');
+        return;
+      }
+
+      // Rate limiting: max 5 offers
+      if (mySentOffersCount >= MAX_TRADE_OFFERS) {
+        setTradeStatus('Maximum ' + MAX_TRADE_OFFERS + ' offers per team reached.', 'error');
+        return;
+      }
+
+      // Rate limiting: 1 offer per minute
+      const now = Date.now();
+      if (now - lastTradeOfferTime < TRADE_COOLDOWN_MS) {
+        const waitSec = Math.ceil((TRADE_COOLDOWN_MS - (now - lastTradeOfferTime)) / 1000);
+        setTradeStatus('Please wait ' + waitSec + 's before sending another offer.', 'error');
+        return;
+      }
+
+      // Validate holdings
+      const db = window.latestData;
+      const mySchoolCode = getSchoolCodeFromToken();
+      const schoolData = db.schooldata.find(s => s.schoolcode === mySchoolCode);
+      if (!schoolData || schoolData.stocks[stockIndex] < qty) {
+        setTradeStatus('Insufficient shares. You own ' + (schoolData ? schoolData.stocks[stockIndex] : 0) + '.', 'error');
+        return;
+      }
+
+      const stockName = db.stockprices[stockIndex].name;
+      const url = '/createTradeOffer?school=' + encodeURIComponent(token) + '&to=' + encodeURIComponent(targetTeam) + '&stock=' + encodeURIComponent(stockName) + '&qty=' + qty + '&price=' + price;
+
+      setTradeStatus('Sending offer...', '');
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.success === false || data.error) {
+          setTradeStatus(data.message || data.error || 'Failed to send offer.', 'error');
+          return;
+        }
+
+        lastTradeOfferTime = Date.now();
+        mySentOffersCount++;
+        setTradeStatus('Offer sent successfully!', 'success');
+        document.getElementById('tradeQtyInput').value = '';
+        document.getElementById('tradePriceInput').value = '';
+        loadMyTradeOffers();
+      } catch (err) {
+        console.error('Trade offer error:', err);
+        setTradeStatus('Network error. Please try again.', 'error');
+      }
+    }
+
+    async function loadMyTradeOffers() {
+      const token = getSSIDToken();
+      if (!token || !token.includes('_')) {
+        setTradeStatus('Session expired.', 'error', 'tradeViewStatus');
+        return;
+      }
+
+      const listDiv = document.getElementById('tradeOffersList');
+      setTradeStatus('Loading...', '', 'tradeViewStatus');
+
+      try {
+        const res = await fetch('/getMyTradeOffers?school=' + encodeURIComponent(token));
+        const data = await res.json();
+
+        if (data.error) {
+          setTradeStatus(data.error, 'error', 'tradeViewStatus');
+          listDiv.innerHTML = '<div class="trade-offers-empty">Failed to load offers.</div>';
+          return;
+        }
+
+        const offers = data.offers || data || [];
+        const mySchoolCode = getSchoolCodeFromToken();
+        mySentOffersCount = offers.filter(o => o.fromSchool === mySchoolCode && o.status === 'pending').length;
+
+        if (!Array.isArray(offers) || offers.length === 0) {
+          listDiv.innerHTML = '<div class="trade-offers-empty">No trade offers yet.</div>';
+          setTradeStatus('', '', 'tradeViewStatus');
+          return;
+        }
+
+        let html = '';
+        offers.forEach(offer => {
+          const isMine = offer.fromSchool === mySchoolCode;
+          const direction = isMine ? 'To: ' + offer.toSchool : 'From: ' + offer.fromSchool;
+          const statusClass = offer.status || 'pending';
+          const canAccept = !isMine && statusClass === 'pending';
+
+          html += '<div class="trade-offer-card">';
+          html += '<div class="offer-header">';
+          html += '<span class="offer-team">' + direction + '</span>';
+          html += '<span class="offer-status ' + statusClass + '">' + statusClass + '</span>';
+          html += '</div>';
+          html += '<div class="offer-details">';
+          html += '<div><strong>' + offer.stock + '</strong> &times; ' + offer.qty + ' shares</div>';
+          html += '<div>Price: Rs ' + Number(offer.price).toLocaleString("hi") + '/share &bull; Total: Rs ' + (Number(offer.price) * offer.qty).toLocaleString("hi") + '</div>';
+          html += '</div>';
+
+          if (canAccept) {
+            html += '<button class="offer-accept-btn" onclick="acceptTradeOffer(\'' + offer.id + '\', this)">Accept Offer</button>';
+          }
+
+          html += '</div>';
+        });
+
+        listDiv.innerHTML = html;
+        setTradeStatus('', '', 'tradeViewStatus');
+      } catch (err) {
+        console.error('Load offers error:', err);
+        setTradeStatus('Network error.', 'error', 'tradeViewStatus');
+        listDiv.innerHTML = '<div class="trade-offers-empty">Failed to load offers.</div>';
+      }
+    }
+
+    async function acceptTradeOffer(offerId, btnEl) {
+      const token = getSSIDToken();
+      if (!token || !token.includes('_')) {
+        setTradeStatus('Session expired.', 'error', 'tradeViewStatus');
+        return;
+      }
+
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.textContent = 'Accepting...';
+      }
+
+      try {
+        const res = await fetch('/acceptTradeOffer?school=' + encodeURIComponent(token) + '&offerId=' + encodeURIComponent(offerId));
+        const data = await res.json();
+
+        if (data.success === false || data.error) {
+          setTradeStatus(data.message || data.error || 'Failed to accept offer.', 'error', 'tradeViewStatus');
+          if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.textContent = 'Accept Offer';
+          }
+          return;
+        }
+
+        setTradeStatus('Offer accepted!', 'success', 'tradeViewStatus');
+        loadMyTradeOffers();
+        update();
+      } catch (err) {
+        console.error('Accept offer error:', err);
+        setTradeStatus('Network error.', 'error', 'tradeViewStatus');
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.textContent = 'Accept Offer';
+        }
+      }
+    }
+
     // Fallback function for when WebSocket is not available
     function update() {
       if (!isConnected) {
@@ -2229,6 +2691,22 @@
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && modal.style.display === 'block') {
           closePortfolioModal();
+        }
+      });
+
+      const tradeModal = document.getElementById('tradeOffersModal');
+      const tradeCloseBtn = document.getElementById('tradeModalCloseButton');
+      if (tradeCloseBtn) {
+        tradeCloseBtn.onclick = closeTradeOffersModal;
+      }
+      window.addEventListener('click', (event) => {
+        if (event.target === tradeModal) {
+          closeTradeOffersModal();
+        }
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && tradeModal.style.display === 'block') {
+          closeTradeOffersModal();
         }
       });
       
