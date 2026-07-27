@@ -18,8 +18,9 @@ add separate shorting tab for admin
 participants will submit via physical slips, the company and no. of shares to short. Admin will enter those. (no of shares * current price per share) amount will be credited to their portfolios. 
 All such shorts must be listed one over the other in the tab. There should be a withdraw short button next to them. When that button is clicked , the (1.05* the money that was credited to their portfolio), will be deducted. text box for the admin next to each withdraw short button where admin can write when the short has to be withdrawn.
 
-For eg:- P15    Synapse AI       [withdraw short]    "withdraw at round 4"
-         P10   Aether Dynamics   [withdraw short]    "withdraw at round 3"
+For eg:-
+P15    Synapse AI       [withdraw short]    "withdraw at round 4"
+P10   Aether Dynamics   [withdraw short]    "withdraw at round 3"
 
 
 
