@@ -15,8 +15,8 @@ When cumulative demand of shares (adding from top to bottom) >= supply of shares
 
 Shorting mechanics:-
 add separate shorting tab for admin
-participants will submit via physical slips, the company and no. of shares to short. Admin will enter those. (no of shares * current price per share) amount will be credited to their portfolios. 
-All such shorts must be listed one over the other in the tab. There should be a withdraw short button next to them. When that button is clicked , the (1.05* the money that was credited to their portfolio), will be deducted. text box for the admin next to each withdraw short button where admin can write when the short has to be withdrawn.
+participants will submit via physical slips, the company and no. of shares to short. Admin will enter those. Those shares will be credited to their portfolios. 
+All such shorts must be listed one over the other in the tab. There should be a withdraw short button next to them. When that button is clicked , (same no. of shares * current market price) amount will be deducted from their portfolios. text box for the admin next to each withdraw short button where admin can write when the short has to be withdrawn.
 
 For eg:-
 
