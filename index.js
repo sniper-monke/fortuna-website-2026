@@ -54,6 +54,36 @@ function getCurrentData() {
   let path = './database.json';
   delete require.cache[require.resolve(path)];
   let d = require(path);
+  const config = require('./config.js');
+  const stockTemplates = new Map(config.stockPrices.map((stock) => [stock.name, stock]));
+  let dirty = false;
+
+  if (Array.isArray(d.stockprices)) {
+    d.stockprices = d.stockprices.map((stock) => {
+      const template = stockTemplates.get(stock.name) || {};
+      const stocksbought = Number(stock.stocksbought ?? stock.stocksBought ?? 0);
+      const normalized = {
+        ...template,
+        ...stock,
+        stocksbought,
+      };
+      delete normalized.stocksBought;
+      if (stock.stocksbought !== stocksbought || stock.stocksBought !== undefined || template.sector !== stock.sector || template.totalStock !== stock.totalStock) {
+        dirty = true;
+      }
+      return normalized;
+    });
+  }
+
+  if (Array.isArray(d.schooldata) && Array.isArray(d.stockprices)) {
+    d.schooldata.forEach((school) => {
+      if (!Array.isArray(school.stocks)) school.stocks = [];
+      while (school.stocks.length < d.stockprices.length) {
+        school.stocks.push(0);
+        dirty = true;
+      }
+    });
+  }
   
   // Initialize stockPriceHistory if it doesn't exist
   if (!d.stockPriceHistory) {
@@ -67,6 +97,9 @@ function getCurrentData() {
     }
     // Save the updated data
     const fs = require('fs');
+    fs.writeFileSync('./database.json', JSON.stringify(d));
+    dirty = false;
+  } else if (dirty) {
     fs.writeFileSync('./database.json', JSON.stringify(d));
   }
   
@@ -331,6 +364,54 @@ app.get('/updatePricesByPercentage', (req, res) => {
   }
 });
 
+app.get('/updatePriceByPercentage', (req, res) => {
+  if (req.query.u == u && req.query.p == p) {
+    const pct = parseFloat(req.query.percent);
+    if (isNaN(pct)) return res.json({success: false, message: 'Invalid percentage'});
+    const result = db.updatePriceByPercentage(req.query.stock, pct);
+    broadcastData();
+    return res.json(result);
+  } else {
+    return res.json({success: false, message: 'Unauthorized'});
+  }
+});
+
+app.get('/setSuspension', (req, res) => {
+  if (req.query.u == u && req.query.p == p) {
+    const action = req.query.action === 'suspend' ? 'suspend' : 'resume';
+    const result = action === 'suspend' ? db.suspendStock(req.query.stock) : db.resumeStock(req.query.stock);
+    broadcastData();
+    return res.json(result);
+  } else {
+    return res.json({success: false, message: 'Unauthorized'});
+  }
+});
+
+app.get('/ipoCalculate', (req, res) => {
+  if (req.query.u == u && req.query.p == p) {
+    let bids = [];
+    try { bids = JSON.parse(req.query.bids); } catch (e) { return res.json({success: false, message: 'Invalid bids JSON'}); }
+    const supply = parseInt(req.query.supply) || 0;
+    const result = db.calculateIpoPrice(bids, supply);
+    return res.json(result);
+  } else {
+    return res.json({success: false, message: 'Unauthorized'});
+  }
+});
+
+app.get('/ipoLaunch', (req, res) => {
+  if (req.query.u == u && req.query.p == p) {
+    let bids = [];
+    try { bids = JSON.parse(req.query.bids); } catch (e) { return res.json({success: false, message: 'Invalid bids JSON'}); }
+    const supply = parseInt(req.query.supply) || 0;
+    const result = db.launchIpo(req.query.name, supply, bids);
+    broadcastData();
+    return res.json(result);
+  } else {
+    return res.json({success: false, message: 'Unauthorized'});
+  }
+});
+
 app.get('/transferShares', (req, res) => {
   if (req.query.u == u && req.query.p == p) {
     const result = db.transferShares(
@@ -369,6 +450,7 @@ app.get('/acceptTradeOffer', (req, res) => {
   const acc = JSON.parse(process.env.accounts);
   const found = acc.some(a => a.username == school && a.password == schoolPass);
   if (!found) return res.json({success: false, message: 'Invalid auth'});
+  if (!tradetime) return res.json({success: false, message: 'Market is frozen. Trade offers can only be accepted during active trading.'});
   // Validate that this offer is addressed to this school
   delete require.cache[require.resolve('./database.json')];
   const data = require('./database.json');

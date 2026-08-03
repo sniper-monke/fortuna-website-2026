@@ -15,24 +15,24 @@
   
   <style>
     :root {
-      --primary-dark: #0f172a;
-      --secondary-dark: #1e293b;
-      --tertiary-dark: #334155;
-      --navy-dark: #0c1426;
-      --navy-medium: #1a2332;
-      --navy-light: #2d3748;
-      --gold-primary: #f59e0b;
-      --gold-secondary: #d97706;
-      --gold-light: #fbbf24;
-      --gold-accent: #92400e;
+      --primary-dark: #10233f;
+      --secondary-dark: #17375f;
+      --tertiary-dark: #23528a;
+      --navy-dark: #0b1f3a;
+      --navy-medium: #153f73;
+      --navy-light: #1f5a9a;
+      --gold-primary: #38bdf8;
+      --gold-secondary: #2563eb;
+      --gold-light: #7dd3fc;
+      --gold-accent: #1d4ed8;
       --text-primary: #f8fafc;
-      --text-secondary: #cbd5e1;
-      --text-muted: #94a3b8;
-      --border-color: #475569;
+      --text-secondary: #dbeafe;
+      --text-muted: #bfdbfe;
+      --border-color: #3b82f6;
       --success: #10b981;
       --danger: #ef4444;
-      --glass-bg: rgba(30, 41, 59, 0.8);
-      --glass-border: rgba(148, 163, 184, 0.1);
+      --glass-bg: rgba(15, 23, 42, 0.72);
+      --glass-border: rgba(125, 211, 252, 0.14);
     }
 
     * {
@@ -154,7 +154,7 @@
     }
 
     .table-row:hover {
-      background: rgba(245, 158, 11, 0.1);
+      background: rgba(56, 189, 248, 0.12);
       transform: scale(1.01);
     }
 
@@ -216,7 +216,7 @@
     }
 
     .stock-name-clickable:hover {
-      background: rgba(245, 158, 11, 0.2);
+      background: rgba(56, 189, 248, 0.2);
       color: var(--gold-primary) !important;
     }
 
@@ -791,7 +791,7 @@
       <!-- Current Holdings -->
       <div class="holdings-container hover-lift scrollbar-hide">
         <div class="flex items-center gap-2 mb-2">
-          <i data-lucide="portfolio" class="w-4 h-4" style="color: var(--gold-primary);"></i>
+          <i data-lucide="briefcase" class="w-4 h-4" style="color: var(--gold-primary);"></i>
           <h2 class="section-title text-sm mb-0">Current Holdings</h2>
         </div>
         <div id="stock-list" class="space-y-1"></div>
@@ -1897,7 +1897,10 @@
           }
         }
 
-        const ownedPercentage = (schoolData.stocks[i] / sp[i].totalStock * 100).toFixed(2);
+        const totalStock = Number(sp[i].totalStock || 0);
+        const ownedShares = Number(schoolData.stocks[i] || 0);
+        const availableShares = totalStock - Number(sp[i].stocksbought ?? sp[i].stocksBought ?? 0);
+        const ownedPercentage = totalStock > 0 ? (ownedShares / totalStock * 100).toFixed(2) : '0.00';
         
         // Determine if this row's chart should be open
         const isChartOpen = (activeChartIndex === i);
@@ -1920,7 +1923,7 @@
             </td>
             <td class="px-3 py-1 text-xs font-semibold" style="color: var(--text-primary);">${schoolData.stocks[i]}</td>
             <td class="px-3 py-1 text-xs" style="color: var(--gold-primary);">${ownedPercentage}%</td>
-            <td class="px-3 py-1 text-xs" style="color: var(--text-secondary);">${(sp[i].totalStock-sp[i].stocksbought).toLocaleString("hi")}</td>
+            <td class="px-3 py-1 text-xs" style="color: var(--text-secondary);">${availableShares.toLocaleString("hi")}</td>
             <td class="px-3 py-1 text-xs" style="color: var(--text-muted);">${sp[i].risk || 'N/A'}</td>
           </tr>
           <tr class="inline-chart-row">
@@ -2006,7 +2009,7 @@
         // No real holdings - show placeholder message
         holdingsHTML = `
           <div class="text-center py-8">
-            <i data-lucide="portfolio" class="w-12 h-12 mx-auto mb-4" style="color: var(--gold-primary); opacity: 0.5;"></i>
+            <i data-lucide="briefcase" class="w-12 h-12 mx-auto mb-4" style="color: var(--gold-primary); opacity: 0.5;"></i>
             <h3 class="text-lg font-semibold mb-2" style="color: var(--text-primary);">No Holdings Yet</h3>
             <p class="text-sm mb-2" style="color: var(--text-secondary);">Your stock investments will appear here</p>
             <p class="text-xs" style="color: var(--text-muted);">Visit the trading portal to start investing</p>

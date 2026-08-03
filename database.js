@@ -1,6 +1,12 @@
 const fs = require('fs');
 const filepath = './database.json';
 
+function normalizeStockRecord(stock) {
+  const normalized = {...stock, stocksbought: Number(stock.stocksbought ?? stock.stocksBought ?? 0)};
+  delete normalized.stocksBought;
+  return normalized;
+}
+
 function makeid(length) {
   let result = '';
   const characters =
@@ -30,7 +36,7 @@ class Database {
       stockprices: [],
       stockPriceHistory: [],
     };
-    database.stockprices = config.stockPrices;
+    database.stockprices = config.stockPrices.map(normalizeStockRecord);
     const sp = JSON.parse(process.env.all_prices);
 
     database.allPrices = [sp[0]];
@@ -43,6 +49,7 @@ class Database {
     database.tradeOffers = [];
     database.lastFreezeSnapshot = null;
     database.tradetime = true;
+    database.suspendedStocks = [];
     
     // Initialize stock price history with current prices and timestamps
     database.stockPriceHistory = [];
@@ -123,7 +130,12 @@ class Database {
     const stockIndex = db.schooldata[schoolIndex].stocks.findIndex(
         (stock, index) => stockname === db.stockprices[index].name,
     );
-    
+
+    // Check if the stock is suspended from trading
+    if ((db.suspendedStocks || []).includes(stockname)) {
+      return { success: false, message: `${stockname} is currently suspended from trading`, stocks: db.schooldata[schoolIndex].stocks[stockIndex] };
+    }
+
     // Check if sufficient cash is available
     if (db.schooldata[schoolIndex].cash < (db.stockprices[stockIndex].price) * n) {
       return { success: false, message: "Insufficient funds", stocks: db.schooldata[schoolIndex].stocks[stockIndex] };
@@ -228,6 +240,11 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
         (stock, index) => stockname === db.stockprices[index].name,
     );
     
+    // Check if the stock is suspended from trading
+    if ((db.suspendedStocks || []).includes(stockname)) {
+      return { success: false, message: `${stockname} is currently suspended from trading`, stocks: db.schooldata[schoolIndex].stocks[stockIndex] };
+    }
+
     // Check if sufficient stocks are owned
     if (db.schooldata[schoolIndex].stocks[stockIndex] < n) {
       return { success: false, message: "Insufficient stocks owned", stocks: db.schooldata[schoolIndex].stocks[stockIndex] };
@@ -409,7 +426,7 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     fs.writeFileSync('./database.json', JSON.stringify(data));
   }
 
-  // Update all stock prices by a percentage (e.g., +10 or -5)
+  // Admin: update all stock prices by a percentage (e.g., +10 or -5)
   updatePricesByPercentage(percentChange) {
     const data = require('./database.json');
     const multiplier = 1 + percentChange / 100;
@@ -423,6 +440,144 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     }
     fs.writeFileSync('./database.json', JSON.stringify(data));
     return { success: true, message: `All prices updated by ${percentChange}%` };
+  }
+
+  // Admin: update a single stock's price by a percentage
+  updatePriceByPercentage(stockName, percentChange) {
+    const data = require('./database.json');
+    const stockIndex = data.stockprices.findIndex(s => s.name === stockName);
+    if (stockIndex === -1) return { success: false, message: 'Stock not found' };
+    const multiplier = 1 + percentChange / 100;
+    const oldPrice = parseFloat(data.stockprices[stockIndex].price);
+    const newPrice = parseFloat((oldPrice * multiplier).toFixed(2));
+    const updatedDb = this.updateStockPriceHistory(stockIndex, oldPrice, newPrice);
+    Object.assign(data, updatedDb);
+    data.stockprices[stockIndex].price = newPrice.toFixed(2);
+    data.stockprices[stockIndex].lastBoughtPrice = newPrice.toFixed(2);
+    fs.writeFileSync('./database.json', JSON.stringify(data));
+    return { success: true, message: `${stockName} price updated by ${percentChange}%` };
+  }
+
+  // Admin: suspend a stock from trading
+  suspendStock(stockName) {
+    const data = require('./database.json');
+    const stockIndex = data.stockprices.findIndex(s => s.name === stockName);
+    if (stockIndex === -1) return { success: false, message: 'Stock not found' };
+    if (!data.suspendedStocks) data.suspendedStocks = [];
+    if (!data.suspendedStocks.includes(stockName)) data.suspendedStocks.push(stockName);
+    fs.writeFileSync('./database.json', JSON.stringify(data));
+    return { success: true, message: `${stockName} suspended from trading` };
+  }
+
+  // Admin: resume/lift a stock suspension
+  resumeStock(stockName) {
+    const data = require('./database.json');
+    if (!data.suspendedStocks) data.suspendedStocks = [];
+    data.suspendedStocks = data.suspendedStocks.filter(n => n !== stockName);
+    fs.writeFileSync('./database.json', JSON.stringify(data));
+    return { success: true, message: `${stockName} trading resumed` };
+  }
+
+  // IPO: compute clearing price and allocations from participant bids
+  // bids: [{ team, price, shares }], supply: total shares on offer
+  calculateIpoPrice(bids, supply) {
+    if (!Array.isArray(bids) || bids.length === 0) {
+      return { success: false, message: 'No bids entered' };
+    }
+    const valid = bids.filter(b => b && b.team && b.price > 0 && b.shares > 0);
+    if (valid.length === 0) {
+      return { success: false, message: 'No valid bids (need team, price and shares)' };
+    }
+    const sorted = valid.slice().sort((a, b) => b.price - a.price);
+    let cumulative = 0;
+    let clearingPrice = null;
+    for (let i = 0; i < sorted.length; i++) {
+      cumulative += sorted[i].shares;
+      if (cumulative >= supply) {
+        clearingPrice = sorted[i].price;
+        break;
+      }
+    }
+    if (clearingPrice === null) {
+      return { success: false, message: `Total demand (${cumulative} shares) is less than supply (${supply} shares)` };
+    }
+
+    // Allocate: bids strictly above clearing get full shares; bids at clearing get pro-rata; below get nothing
+    const above = sorted.filter(b => b.price > clearingPrice);
+    const atPrice = sorted.filter(b => b.price === clearingPrice);
+    const demandAbove = above.reduce((s, b) => s + b.shares, 0);
+    const demandAt = atPrice.reduce((s, b) => s + b.shares, 0);
+    let remaining = supply - demandAbove;
+    if (remaining < 0) remaining = 0;
+
+    const allocations = {};
+    above.forEach(b => { allocations[b.team] = { price: clearingPrice, shares: b.shares }; });
+    if (demandAt > 0) {
+      const ratio = remaining / demandAt;
+      atPrice.forEach(b => {
+        allocations[b.team] = { price: clearingPrice, shares: Math.floor(b.shares * ratio) };
+      });
+    }
+
+    return {
+      success: true,
+      clearingPrice,
+      totalDemand: cumulative,
+      demandAbove,
+      demandAt,
+      remaining,
+      allocations
+    };
+  }
+
+  // IPO: add the new stock to the exchange, allocate shares and charge teams
+  launchIpo(name, supply, bids) {
+    const result = this.calculateIpoPrice(bids, supply);
+    if (!result.success) return result;
+    const data = require('./database.json');
+    if (data.stockprices.find(s => s.name === name)) {
+      return { success: false, message: 'Stock already exists on the exchange' };
+    }
+    const price = result.clearingPrice;
+    const stockIndex = data.stockprices.length;
+    const stock = {
+      name,
+      price: price.toFixed(2),
+      sector: "Aerospace and Defense",
+      totalStock: supply,
+      stocksbought: 0,
+      lastBoughtBy: "",
+      lastBoughtPrice: price.toFixed(2),
+      lastBoughtQty: 0,
+      stockPriceHistory: [price],
+      risk: "extreme"
+    };
+    data.stockprices.push(stock);
+    if (!data.stockPriceHistory) data.stockPriceHistory = [];
+    data.stockPriceHistory.push([{ price, timestamp: new Date().toISOString(), change: 0 }]);
+    if (!data.allPrices) data.allPrices = [];
+    data.allPrices.push([price]);
+
+    // Extend every team's holdings and allocate shares at the clearing price
+    data.schooldata.forEach(school => { school.stocks.push(0); });
+    let allocated = 0;
+    Object.entries(result.allocations).forEach(([team, alloc]) => {
+      const si = data.schooldata.findIndex(s => s.schoolcode === team);
+      if (si !== -1 && alloc.shares > 0) {
+        data.schooldata[si].stocks[stockIndex] += alloc.shares;
+        data.schooldata[si].cash -= alloc.price * alloc.shares;
+        allocated += alloc.shares;
+      }
+    });
+    data.stockprices[stockIndex].stocksbought = allocated;
+
+    this.addTradeLog({
+      type: 'ipo',
+      stockName: name, quantity: supply,
+      price, timestamp: new Date().toISOString()
+    });
+    fs.writeFileSync('./database.json', JSON.stringify(data));
+    return { success: true, message: `${name} IPO launched at ₹${price}`, stockIndex, clearingPrice: price };
   }
 
   // Admin: transfer shares from one team to another at a negotiated price
@@ -485,6 +640,11 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
       fs.writeFileSync('./database.json', JSON.stringify(data));
       return { success: false, message: 'School or stock not found' };
     }
+    if ((data.suspendedStocks || []).includes(offer.stockName)) {
+      offer.status = 'failed';
+      fs.writeFileSync('./database.json', JSON.stringify(data));
+      return { success: false, message: `${offer.stockName} is currently suspended from trading` };
+    }
     if (data.schooldata[fromIdx].stocks[stockIndex] < offer.quantity) {
       offer.status = 'failed';
       fs.writeFileSync('./database.json', JSON.stringify(data));
@@ -534,18 +694,9 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     return { success: true, message: 'Market started' };
   }
 
-  // Calculate scores per BackendScoring.md
+  // Calculate scores: portfolio value (out of 25) + concentration (out of 5)
   calculateScores() {
     const data = require('./database.json');
-    const riskMap = {
-      "Aether Dynamics": 1.5, "Synapse AI": 2.5, "CoreX Systems": 4,
-      "Voltaris Energy": 1, "Bharat PetroEnergy": 2, "AxisPoint Capital": 1.5,
-      "Merchant Brothers": 3.5, "Dr. Saha's Pharma": 1.5, "Helix Biotech": 4,
-      "PureLife Industries": 1, "UrbanNest Foods": 3, "Ahuja Estates": 4,
-      "TitanGrid Infrastructure": 2, "Awasthi Motors": 2, "Velocity Electric": 4
-    };
-    const sectorMap = {};
-    data.stockprices.forEach(s => { sectorMap[s.name] = s.sector; });
 
     const teamScores = data.schooldata.map(school => {
       let totalFolioValue = school.cash;
@@ -557,15 +708,6 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
           holdings[data.stockprices[idx].name] = { qty, value: val, price: Number(data.stockprices[idx].price) };
         }
       });
-
-      // Diversification
-      const sectorsHeld = new Set();
-      Object.keys(holdings).forEach(name => sectorsHeld.add(sectorMap[name]));
-      const numSectors = sectorsHeld.size;
-      let diversification = 1;
-      if (numSectors >= 5) diversification = 5;
-      else if (numSectors === 4) diversification = 4;
-      else if (numSectors === 3) diversification = 2.5;
 
       // Concentration (largest single company as % of folio value)
       let largestHoldingPct = 0;
@@ -581,43 +723,22 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
       else if (largestHoldingPct > 40) concentration = 3;
       else if (largestHoldingPct > 30) concentration = 4;
 
-      // Portfolio risk
-      let weightedRisk = 0;
-      if (totalFolioValue > 0) {
-        Object.keys(holdings).forEach(name => {
-          const weight = holdings[name].value / totalFolioValue;
-          weightedRisk += weight * (riskMap[name] || 2);
-        });
-      }
-      let riskScore = 1.25;
-      if (weightedRisk < 1.4) riskScore = 10;
-      else if (weightedRisk < 1.8) riskScore = 8.75;
-      else if (weightedRisk < 2.2) riskScore = 7.5;
-      else if (weightedRisk < 2.6) riskScore = 6.25;
-      else if (weightedRisk < 3.0) riskScore = 5;
-      else if (weightedRisk < 3.4) riskScore = 3.75;
-      else if (weightedRisk < 3.8) riskScore = 2.5;
-
-      const freezeScore = diversification + concentration + riskScore;
-
       return {
         team: school.schoolcode,
         cash: school.cash,
         folioValue: totalFolioValue,
         holdings,
-        diversification: { score: diversification, sectorsHeld: numSectors, sectors: [...sectorsHeld] },
-        concentration: { score: concentration, largestHoldingPct },
-        risk: { score: riskScore, weightedRisk },
-        freezeScore
+        concentration: { score: concentration, largestHoldingPct }
       };
     });
 
-    // Sort by folioValue for portfolio value scoring (highest gets 55)
+    // Sort by folioValue for portfolio value scoring (highest gets 25)
     teamScores.sort((a, b) => b.folioValue - a.folioValue);
     const highestFolio = teamScores.length > 0 ? teamScores[0].folioValue : 1;
     teamScores.forEach((t, idx) => {
       t.rank = idx + 1;
-      t.portfolioValueScore = ((t.folioValue / highestFolio) * 55);
+      t.portfolioValueScore = parseFloat(((t.folioValue / highestFolio) * 25).toFixed(2));
+      t.freezeScore = parseFloat((t.portfolioValueScore + t.concentration.score).toFixed(2));
     });
 
     return { teams: teamScores, highestFolioValue: highestFolio };
