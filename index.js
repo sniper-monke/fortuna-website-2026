@@ -517,3 +517,46 @@ app.get('/getTradeLog', (req, res) => {
   const log = db.getTradeLog();
   return res.json(log);
 });
+
+app.get('/leaderboard', (req, res) => {
+  return res.sendFile(__dirname + '/html/leaderboard.html');
+});
+
+app.get('/leaderboardData', (req, res) => {
+  const results = db.calculateScores();
+  return res.json(results);
+});
+
+app.get('/declareDividends', (req, res) => {
+  if (req.query.u == u && req.query.p == p) {
+    const result = db.declareDividends();
+    broadcastData();
+    return res.json(result);
+  }
+  return res.json({ success: false, message: 'Unauthorized' });
+});
+
+app.get('/addShort', (req, res) => {
+  if (req.query.u == u && req.query.p == p) {
+    const result = db.addShort(req.query.team, req.query.stock, req.query.shares, req.query.note);
+    broadcastData();
+    return res.json(result);
+  }
+  return res.json({ success: false, message: 'Unauthorized' });
+});
+
+app.get('/getShorts', (req, res) => {
+  if (req.query.u == u && req.query.p == p) {
+    return res.json(db.getShorts());
+  }
+  return res.json({ success: false, message: 'Unauthorized' });
+});
+
+app.get('/withdrawShort', (req, res) => {
+  if (req.query.u == u && req.query.p == p) {
+    const result = db.withdrawShort(req.query.shortId, req.query.note);
+    broadcastData();
+    return res.json(result);
+  }
+  return res.json({ success: false, message: 'Unauthorized' });
+});

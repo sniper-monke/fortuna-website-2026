@@ -11,7 +11,8 @@ module.exports = {
       lastBoughtPrice: 0,
       lastBoughtQty: 0,
       stockPriceHistory: [620],
-      risk: "upper high end"
+      risk: "upper high end",
+      dividendYield: 0.8
     },
     {
       name: "Synapse AI",
@@ -23,7 +24,8 @@ module.exports = {
       lastBoughtPrice: 0,
       lastBoughtQty: 0,
       stockPriceHistory: [310],
-      risk: "high"
+      risk: "high",
+      dividendYield: 0
     },
     {
       name: "CoreX Systems",
@@ -35,7 +37,8 @@ module.exports = {
       lastBoughtPrice: 0,
       lastBoughtQty: 0,
       stockPriceHistory: [140],
-      risk: "very high"
+      risk: "very high",
+      dividendYield: 0.4
     },
     {
       name: "Voltaris Energy",
@@ -47,7 +50,8 @@ module.exports = {
       lastBoughtPrice: 0,
       lastBoughtQty: 0,
       stockPriceHistory: [950],
-      risk: "low"
+      risk: "low",
+      dividendYield: 2
     },
     {
       name: "Bharat PetroEnergy",
@@ -59,7 +63,8 @@ module.exports = {
       lastBoughtPrice: 0,
       lastBoughtQty: 0,
       stockPriceHistory: [680],
-      risk: "medium"
+      risk: "medium",
+      dividendYield: 2.5
     },
     {
       name: "AxisPoint Capital",
@@ -71,7 +76,8 @@ module.exports = {
       lastBoughtPrice: 0,
       lastBoughtQty: 0,
       stockPriceHistory: [780],
-      risk: "low"
+      risk: "low",
+      dividendYield: 1.8
     },
     {
       name: "Merchant Brothers",
@@ -83,7 +89,8 @@ module.exports = {
       lastBoughtPrice: 0,
       lastBoughtQty: 0,
       stockPriceHistory: [1150],
-      risk: "medium-high"
+      risk: "medium-high",
+      dividendYield: 1.6
     },
     {
       name: "Dr. Saha's Pharma",
@@ -95,7 +102,8 @@ module.exports = {
       lastBoughtPrice: 0,
       lastBoughtQty: 0,
       stockPriceHistory: [250],
-      risk: "low"
+      risk: "low",
+      dividendYield: 1.2
     },
     {
       name: "Helix Biotech",
@@ -107,7 +115,8 @@ module.exports = {
       lastBoughtPrice: 0,
       lastBoughtQty: 0,
       stockPriceHistory: [410],
-      risk: "very high"
+      risk: "very high",
+      dividendYield: 0.3
     },
     {
       name: "PureLife Industries",
@@ -119,7 +128,8 @@ module.exports = {
       lastBoughtPrice: 0,
       lastBoughtQty: 0,
       stockPriceHistory: [270],
-      risk: "low"
+      risk: "low",
+      dividendYield: 1.4
     },
     {
       name: "UrbanNest Foods",
@@ -131,7 +141,8 @@ module.exports = {
       lastBoughtPrice: 0,
       lastBoughtQty: 0,
       stockPriceHistory: [195],
-      risk: "medium-high"
+      risk: "medium-high",
+      dividendYield: 1.1
     },
     {
       name: "Ahuja Estates",
@@ -143,7 +154,8 @@ module.exports = {
       lastBoughtPrice: 0,
       lastBoughtQty: 0,
       stockPriceHistory: [980],
-      risk: "high"
+      risk: "high",
+      dividendYield: 1.5
     },
     {
       name: "TitanGrid Infrastructure",
@@ -155,7 +167,8 @@ module.exports = {
       lastBoughtPrice: 0,
       lastBoughtQty: 0,
       stockPriceHistory: [510],
-      risk: "medium-low"
+      risk: "medium-low",
+      dividendYield: 1
     },
     {
       name: "Awasthi Motors",
@@ -167,7 +180,8 @@ module.exports = {
       lastBoughtPrice: 0,
       lastBoughtQty: 0,
       stockPriceHistory: [720],
-      risk: "medium"
+      risk: "medium",
+      dividendYield: 0.9
     },
     {
       name: "Velocity Electric",
@@ -179,7 +193,8 @@ module.exports = {
       lastBoughtPrice: 0,
       lastBoughtQty: 0,
       stockPriceHistory: [1850],
-      risk: "very high"
+      risk: "very high",
+      dividendYield: 0.2
     }
   ]
 };

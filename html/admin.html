@@ -686,6 +686,9 @@
                 <button class="tab-btn" data-tab="transfer" onclick="switchTab('transfer')">Transfer</button>
                 <button class="tab-btn" data-tab="ipo" onclick="switchTab('ipo')">IPO</button>
                 <button class="tab-btn" data-tab="suspension" onclick="switchTab('suspension')">Suspension</button>
+                <button class="tab-btn" data-tab="dividends" onclick="switchTab('dividends')">Dividends</button>
+                <button class="tab-btn" data-tab="shorting" onclick="switchTab('shorting')">Shorting</button>
+                <button class="tab-btn" data-tab="leaderboard" onclick="switchTab('leaderboard')">Leaderboard</button>
                 <button class="tab-btn" data-tab="scoring" onclick="switchTab('scoring')">Scoring</button>
                 <button class="tab-btn" data-tab="tradelog" onclick="switchTab('tradelog')">Trade Log</button>
             </div>
@@ -735,22 +738,37 @@
 
             <!-- ========== TAB: Price Adjust ========== -->
             <div id="tab-adjust" class="tab-content hidden">
-                <div class="glass-container p-6">
-                    <h3 class="section-title"><i data-lucide="trending-up" class="w-5 h-5"></i> Update One Company By Percentage</h3>
-                    <p class="text-sm text-zinc-400 mb-4">Choose a company and apply a positive or negative percentage change to just that stock.</p>
-                    <div class="flex flex-wrap items-end gap-4">
-                        <div class="form-group flex-1 min-w-[220px]">
-                            <label>Company</label>
-                            <select id="percentageStock"></select>
+                <div class="glass-container p-6 space-y-6">
+                    <div>
+                        <h3 class="section-title"><i data-lucide="trending-up" class="w-5 h-5"></i> Update All Companies By Percentage</h3>
+                        <p class="text-sm text-zinc-400 mb-4">Apply a positive or negative percentage change to every company in the market.</p>
+                        <div class="flex flex-wrap items-end gap-4">
+                            <div class="form-group flex-1 min-w-[220px]">
+                                <label>Percentage Change (%)</label>
+                                <input type="number" id="allStockPctInput" step="0.1" placeholder="e.g., +10 or -5">
+                            </div>
+                            <button class="btn" style="border-color: #10b981; color: #10b981; background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.08)); font-weight: 700; padding: 0.875rem 2rem;"
+                                    onclick="applyGlobalPercentageChange()">Apply To All</button>
                         </div>
-                        <div class="form-group flex-1 min-w-[200px]">
-                            <label>Percentage Change (%)</label>
-                            <input type="number" id="stockPctInput" step="0.1" placeholder="e.g., +10 or -5">
-                        </div>
-                        <button class="btn" style="border-color: #38bdf8; color: #38bdf8; background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(37, 99, 235, 0.08)); font-weight: 700; padding: 0.875rem 2rem;"
-                                onclick="applyStockPercentageChange()">Apply</button>
+                        <div id="allPctResult" class="mt-3 text-sm hidden"></div>
                     </div>
-                    <div id="pctResult" class="mt-3 text-sm hidden"></div>
+                    <div>
+                        <h3 class="section-title"><i data-lucide="trending-up" class="w-5 h-5"></i> Update One Company By Percentage</h3>
+                        <p class="text-sm text-zinc-400 mb-4">Choose a company and apply a positive or negative percentage change to just that stock.</p>
+                        <div class="flex flex-wrap items-end gap-4">
+                            <div class="form-group flex-1 min-w-[220px]">
+                                <label>Company</label>
+                                <select id="percentageStock"></select>
+                            </div>
+                            <div class="form-group flex-1 min-w-[200px]">
+                                <label>Percentage Change (%)</label>
+                                <input type="number" id="stockPctInput" step="0.1" placeholder="e.g., +10 or -5">
+                            </div>
+                            <button class="btn" style="border-color: #38bdf8; color: #38bdf8; background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(37, 99, 235, 0.08)); font-weight: 700; padding: 0.875rem 2rem;"
+                                    onclick="applyStockPercentageChange()">Apply</button>
+                        </div>
+                        <div id="pctResult" class="mt-3 text-sm hidden"></div>
+                    </div>
                 </div>
             </div>
 
@@ -849,6 +867,70 @@
                         </div>
                     </div>
                     <div id="transferResult" class="mt-3 text-sm hidden"></div>
+                </div>
+            </div>
+
+            <!-- ========== TAB: Dividends ========== -->
+            <div id="tab-dividends" class="tab-content hidden">
+                <div class="glass-container p-6">
+                    <h3 class="section-title"><i data-lucide="gift" class="w-5 h-5"></i> Declare Dividends</h3>
+                    <p class="text-sm text-zinc-400 mb-4">Credit each team a dividend based on all qualifying holdings and the company dividend yield.</p>
+                    <button class="btn" style="border-color: #10b981; color: #10b981; background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.08)); font-weight: 700; padding: 0.875rem 1.5rem;" onclick="declareDividends()">Declare Dividends</button>
+                    <div id="dividendsResult" class="mt-4 text-sm hidden"></div>
+                </div>
+            </div>
+
+            <!-- ========== TAB: Shorting ========== -->
+            <div id="tab-shorting" class="tab-content hidden">
+                <div class="glass-container p-6">
+                    <h3 class="section-title"><i data-lucide="scanner" class="w-5 h-5"></i> Shorting Control</h3>
+                    <p class="text-sm text-zinc-400 mb-4">Record manual short slips, then withdraw them later with the market-price penalty.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="form-group">
+                            <label>Team</label>
+                            <select id="shortTeam"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Stock</label>
+                            <select id="shortStock"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Shares</label>
+                            <input type="number" id="shortShares" min="1" placeholder="Number of shares">
+                        </div>
+                        <div class="form-group">
+                            <label>Admin Note</label>
+                            <input type="text" id="shortNote" placeholder="Withdraw at round 4">
+                        </div>
+                    </div>
+                    <button class="btn" style="border-color: #8b5cf6; color: #8b5cf6; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05)); font-weight: 700; padding: 0.875rem 1.5rem;" onclick="addShortPosition()">Record Short</button>
+                    <div id="shortingResult" class="mt-4 text-sm hidden"></div>
+                    <div class="overflow-x-auto mt-6">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="border-b border-white/20">
+                                    <th class="px-3 py-2 text-gold-primary">Team</th>
+                                    <th class="px-3 py-2 text-gold-primary">Stock</th>
+                                    <th class="px-3 py-2 text-gold-primary">Shares</th>
+                                    <th class="px-3 py-2 text-gold-primary">Status</th>
+                                    <th class="px-3 py-2 text-gold-primary">Note</th>
+                                    <th class="px-3 py-2 text-gold-primary">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="shortsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== TAB: Leaderboard ========== -->
+            <div id="tab-leaderboard" class="tab-content hidden">
+                <div class="glass-container p-6">
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                        <h3 class="section-title"><i data-lucide="bar-chart-3" class="w-5 h-5"></i> Live Portfolio Leaderboard</h3>
+                        <a href="/leaderboard" target="_blank" class="text-sm text-sky-300 underline">Open projector view</a>
+                    </div>
+                    <div id="leaderboardDisplay"></div>
                 </div>
             </div>
 
@@ -988,6 +1070,11 @@
             document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active-tab');
             if (tabId === 'tradelog') loadTradeLog();
             if (tabId === 'transfer') populateTransferDropdowns();
+            if (tabId === 'shorting') {
+                populateShortingFields();
+                loadShorts();
+            }
+            if (tabId === 'leaderboard') loadLeaderboard();
         }
 
         function marketFreeze() {
@@ -1117,6 +1204,7 @@
             }).catch(()=>{});
 
             populateAdminDropdowns(sp);
+            populateShortingFields();
             ensureIpoBidRow();
 
             window.currentData = db;
@@ -1157,6 +1245,134 @@
             }
         }
 
+        function populateShortingFields() {
+            if (!window.currentData) return;
+            const teamSelect = document.getElementById('shortTeam');
+            const stockSelect = document.getElementById('shortStock');
+            if (teamSelect) {
+                teamSelect.innerHTML = window.currentData.schooldata.map(school => `<option value="${school.schoolcode}">${school.schoolcode}</option>`).join('');
+            }
+            if (stockSelect) {
+                stockSelect.innerHTML = window.currentData.stockprices.map(stock => `<option value="${stock.name}">${stock.name}</option>`).join('');
+            }
+        }
+
+        function declareDividends() {
+            fetch(`/declareDividends?u=${u}&p=${p}`).then(x => x.json()).then(r => {
+                const target = document.getElementById('dividendsResult');
+                if (!target) return;
+                target.classList.remove('hidden');
+                if (r.success) {
+                    const rows = (r.credits || []).map(item => `<li class="py-1"><span class="text-sky-300">${item.team}</span> received ₹${Number(item.amount).toFixed(2)}</li>`).join('');
+                    target.innerHTML = `<div class="text-emerald-300">${r.message}</div><ul class="mt-2 space-y-1 text-sm text-zinc-300">${rows || '<li>No dividends credited.</li>'}</ul>`;
+                } else {
+                    target.innerHTML = `<div class="text-red-300">${r.message || 'Unable to declare dividends'}</div>`;
+                }
+            });
+        }
+
+        function addShortPosition() {
+            const team = document.getElementById('shortTeam').value;
+            const stock = document.getElementById('shortStock').value;
+            const shares = document.getElementById('shortShares').value;
+            const note = document.getElementById('shortNote').value;
+            if (!team || !stock || !shares) {
+                showNotification('error', 'Shorting', 'Select a team, stock and shares');
+                return;
+            }
+            fetch(`/addShort?u=${u}&p=${p}&team=${encodeURIComponent(team)}&stock=${encodeURIComponent(stock)}&shares=${shares}&note=${encodeURIComponent(note)}`).then(x => x.json()).then(r => {
+                const target = document.getElementById('shortingResult');
+                if (!target) return;
+                target.classList.remove('hidden');
+                if (r.success) {
+                    showNotification('success', 'Short Recorded', `${team} has a new short for ${stock}`);
+                    document.getElementById('shortShares').value = '';
+                    document.getElementById('shortNote').value = '';
+                    loadShorts();
+                } else {
+                    target.innerHTML = `<div class="text-red-300">${r.message || 'Could not record short'}</div>`;
+                }
+            });
+        }
+
+        function loadShorts() {
+            fetch(`/getShorts?u=${u}&p=${p}`).then(x => x.json()).then(r => {
+                const body = document.getElementById('shortsTableBody');
+                if (!body) return;
+                if (!r.success) {
+                    body.innerHTML = '<tr><td colspan="6" class="px-3 py-2 text-red-300">Unable to load shorts</td></tr>';
+                    return;
+                }
+                const shorts = Array.isArray(r.shorts) ? r.shorts : [];
+                if (shorts.length === 0) {
+                    body.innerHTML = '<tr><td colspan="6" class="px-3 py-2 text-zinc-400">No shorts recorded yet.</td></tr>';
+                    return;
+                }
+                body.innerHTML = shorts.map(short => `
+                    <tr class="border-b border-white/10">
+                        <td class="px-3 py-2">${short.team}</td>
+                        <td class="px-3 py-2">${short.stockName}</td>
+                        <td class="px-3 py-2">${short.shares}</td>
+                        <td class="px-3 py-2">${short.status === 'active' ? '<span class="text-amber-300">Active</span>' : '<span class="text-emerald-300">Withdrawn</span>'}</td>
+                        <td class="px-3 py-2">${short.note || '-'}</td>
+                        <td class="px-3 py-2">
+                            ${short.status === 'active' ? `<div class="flex flex-wrap gap-2 items-center"><input type="text" id="short-withdraw-note-${short.id}" class="rounded-md bg-slate-900 border border-white/10 px-2 py-1 text-sm" placeholder="Withdraw at round 4"><button class="btn" style="border-color:#ef4444;color:#ef4444;background:rgba(239,68,68,0.12);padding:0.4rem 0.7rem;font-weight:700;" onclick="withdrawShort('${short.id}')">Withdraw Short</button></div>` : '<span class="text-zinc-500">-</span>'}
+                        </td>
+                    </tr>
+                `).join('');
+            });
+        }
+
+        function withdrawShort(shortId) {
+            const noteInput = document.getElementById(`short-withdraw-note-${shortId}`);
+            const note = noteInput ? noteInput.value : '';
+            fetch(`/withdrawShort?u=${u}&p=${p}&shortId=${shortId}&note=${encodeURIComponent(note)}`).then(x => x.json()).then(r => {
+                if (r.success) {
+                    showNotification('success', 'Short Withdrawn', `₹${Number(r.amount).toFixed(2)} deducted`);
+                    loadShorts();
+                } else {
+                    showNotification('error', 'Shorting', r.message || 'Could not withdraw short');
+                }
+            });
+        }
+
+        function loadLeaderboard() {
+            fetch('/leaderboardData').then(x => x.json()).then(data => {
+                const target = document.getElementById('leaderboardDisplay');
+                if (!target) return;
+                if (!data || !data.teams) {
+                    target.innerHTML = '<div class="text-zinc-400">No leaderboard data yet.</div>';
+                    return;
+                }
+                const teams = [...data.teams].sort((a, b) => b.folioValue - a.folioValue);
+                let html = '<table class="w-full text-left text-sm"><thead><tr class="border-b border-white/20"><th class="px-3 py-2 text-gold-primary">Rank</th><th class="px-3 py-2 text-gold-primary">Team</th><th class="px-3 py-2 text-gold-primary">Folio Value</th><th class="px-3 py-2 text-gold-primary">Freeze Score</th><th class="px-3 py-2 text-gold-primary">Top Holdings</th></tr></thead><tbody>';
+                teams.forEach((team, index) => {
+                    const holdings = Object.entries(team.holdings || {}).slice(0, 3).map(([name, info]) => `${name} (${info.qty})`).join(', ') || 'No holdings';
+                    html += `<tr class="border-b border-white/10"><td class="px-3 py-2 font-bold ${index === 0 ? 'text-amber-300' : 'text-white'}">${index + 1}</td><td class="px-3 py-2">${team.team}</td><td class="px-3 py-2">₹${team.folioValue.toLocaleString('hi')}</td><td class="px-3 py-2">${team.freezeScore.toFixed(2)}</td><td class="px-3 py-2 text-zinc-300">${holdings}</td></tr>`;
+                });
+                html += '</tbody></table>';
+                target.innerHTML = html;
+            });
+        }
+
+        function applyGlobalPercentageChange() {
+            const pct = parseFloat(document.getElementById('allStockPctInput').value);
+            if (isNaN(pct) || pct === 0) { showNotification('error', 'Invalid', 'Enter non-zero percentage'); return; }
+            if (!confirm(`Apply ${pct > 0 ? '+' : ''}${pct}% to all companies?`)) return;
+            fetch(`/updatePricesByPercentage?u=${u}&p=${p}&percent=${pct}`).then(x=>x.json()).then(r => {
+                const target = document.getElementById('allPctResult');
+                if (!target) return;
+                target.classList.remove('hidden');
+                if (r.success) {
+                    showNotification('success', 'Prices Updated', `All companies shifted by ${pct}%`);
+                    target.innerHTML = `<div class="text-emerald-300">${r.message}</div>`;
+                    update();
+                } else {
+                    target.innerHTML = `<div class="text-red-300">${r.message || 'Could not update all prices'}</div>`;
+                }
+            });
+        }
+
         function applyStockPercentageChange() {
             const stock = document.getElementById('percentageStock').value;
             const pct = parseFloat(document.getElementById('stockPctInput').value);
@@ -1181,9 +1397,9 @@
             const row = document.createElement('tr');
             row.className = 'border-b border-white/10';
             row.innerHTML = `
-                <td class="px-3 py-2"><input type="text" class="w-full rounded-md bg-slate-900 border border-white/10 px-3 py-2 text-sm" placeholder="P10" value="${team}"></td>
-                <td class="px-3 py-2"><input type="number" step="0.01" min="0" class="w-full rounded-md bg-slate-900 border border-white/10 px-3 py-2 text-sm" placeholder="Bid price" value="${price}"></td>
-                <td class="px-3 py-2"><input type="number" min="1" class="w-full rounded-md bg-slate-900 border border-white/10 px-3 py-2 text-sm" placeholder="Shares" value="${shares}"></td>
+                <td class="px-3 py-2"><input type="text" class="w-full rounded-md bg-slate-900 border border-white/10 px-3 py-2 text-sm" style="color:#1e293b" placeholder="P10" value="${team}"></td>
+                <td class="px-3 py-2"><input type="number" step="0.01" min="0" class="w-full rounded-md bg-slate-900 border border-white/10 px-3 py-2 text-sm" style="color:#1e293b" placeholder="Bid price" value="${price}"></td>
+                <td class="px-3 py-2"><input type="number" min="1" class="w-full rounded-md bg-slate-900 border border-white/10 px-3 py-2 text-sm" style="color:#1e293b" placeholder="Shares" value="${shares}"></td>
                 <td class="px-3 py-2"><button class="btn" style="border-color:#ef4444;color:#ef4444;background:rgba(239,68,68,0.12);padding:0.5rem 0.75rem;font-weight:700;" onclick="this.closest('tr').remove()">Remove</button></td>
             `;
             body.appendChild(row);

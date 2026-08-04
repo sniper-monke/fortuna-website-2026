@@ -22,6 +22,15 @@ function makeid(length) {
   return result;
 }
 
+function readDatabase() {
+  delete require.cache[require.resolve(filepath)];
+  return require(filepath);
+}
+
+function writeDatabase(data) {
+  fs.writeFileSync(filepath, JSON.stringify(data));
+}
+
 class Database {
   constructor() {
     const config = require("./config.js");
@@ -696,7 +705,7 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
 
   // Calculate scores: portfolio value (out of 25) + concentration (out of 5)
   calculateScores() {
-    const data = require('./database.json');
+    const data = readDatabase();
 
     const teamScores = data.schooldata.map(school => {
       let totalFolioValue = school.cash;
@@ -746,13 +755,13 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
 
   // Get all freeze scores
   getFreezeScores() {
-    const data = require('./database.json');
+    const data = readDatabase();
     return data.freezeScores || [];
   }
 
   // Get final scores (average of all freeze scores)
   getFinalScores() {
-    const data = require('./database.json');
+    const data = readDatabase();
     const freezes = data.freezeScores || [];
     if (freezes.length === 0) return null;
     const teamMap = {};
@@ -771,16 +780,132 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     return results;
   }
 
+  declareDividends() {
+    const data = readDatabase();
+    const credits = [];
+
+    data.schooldata.forEach((school) => {
+      let dividendAmount = 0;
+      school.stocks.forEach((qty, idx) => {
+        const stock = data.stockprices[idx];
+        if (!stock || qty <= 0) return;
+        const yieldPct = Number(stock.dividendYield || stock.dividend || 0);
+        if (yieldPct <= 0) return;
+        const currentPrice = Number(stock.price);
+        dividendAmount += qty * currentPrice * (yieldPct / 100);
+      });
+
+      if (dividendAmount > 0) {
+        school.cash = Number(school.cash) + Number(dividendAmount.toFixed(2));
+        credits.push({ team: school.schoolcode, amount: parseFloat(dividendAmount.toFixed(2)) });
+      }
+    });
+
+    writeDatabase(data);
+    this.addTradeLog({
+      type: 'dividend',
+      quantity: credits.length,
+      timestamp: new Date().toISOString(),
+      details: credits,
+    });
+    return { success: true, message: 'Dividends declared', credits };
+  }
+
+  addShort(team, stockName, shares, note = '') {
+    const data = readDatabase();
+    const schoolIndex = data.schooldata.findIndex((s) => s.schoolcode === team);
+    if (schoolIndex === -1) return { success: false, message: 'Team not found' };
+    const stockIndex = data.stockprices.findIndex((stock) => stock.name === stockName);
+    if (stockIndex === -1) return { success: false, message: 'Stock not found' };
+    const parsedShares = parseInt(shares, 10);
+    if (!parsedShares || parsedShares <= 0) return { success: false, message: 'Shares must be greater than zero' };
+
+    if (!data.shorts) data.shorts = [];
+    if (!data.schooldata[schoolIndex].shorts) data.schooldata[schoolIndex].shorts = [];
+
+    const shortEntry = {
+      id: makeid(12),
+      team,
+      stockName,
+      shares: parsedShares,
+      note: note || 'No note provided',
+      status: 'active',
+      createdAt: new Date().toISOString(),
+    };
+
+    data.shorts.push(shortEntry);
+    data.schooldata[schoolIndex].shorts.push(shortEntry);
+    this.addTradeLog({
+      type: 'short',
+      school: team,
+      stockName,
+      quantity: parsedShares,
+      timestamp: new Date().toISOString(),
+      details: note || 'Short entered',
+    });
+    writeDatabase(data);
+    return { success: true, message: 'Short recorded', short: shortEntry };
+  }
+
+  getShorts() {
+    const data = readDatabase();
+    return { success: true, shorts: data.shorts || [] };
+  }
+
+  withdrawShort(shortId, note = '') {
+    const data = readDatabase();
+    if (!data.shorts) data.shorts = [];
+    const shortEntry = data.shorts.find((entry) => entry.id === shortId && entry.status === 'active');
+    if (!shortEntry) return { success: false, message: 'Active short not found' };
+
+    const schoolIndex = data.schooldata.findIndex((school) => school.schoolcode === shortEntry.team);
+    if (schoolIndex === -1) return { success: false, message: 'Team not found' };
+    const stockIndex = data.stockprices.findIndex((stock) => stock.name === shortEntry.stockName);
+    if (stockIndex === -1) return { success: false, message: 'Stock not found' };
+
+    const currentPrice = Number(data.stockprices[stockIndex].price);
+    const withdrawalAmount = parseFloat((shortEntry.shares * currentPrice * 1.03).toFixed(2));
+    if (Number(data.schooldata[schoolIndex].cash) < withdrawalAmount) {
+      return { success: false, message: 'Team has insufficient cash to withdraw this short' };
+    }
+
+    data.schooldata[schoolIndex].cash = Number(data.schooldata[schoolIndex].cash) - withdrawalAmount;
+    shortEntry.status = 'withdrawn';
+    shortEntry.withdrawnAt = new Date().toISOString();
+    shortEntry.withdrawalNote = note || 'No note provided';
+    shortEntry.withdrawalAmount = withdrawalAmount;
+
+    const schoolShort = data.schooldata[schoolIndex].shorts && data.schooldata[schoolIndex].shorts.find((entry) => entry.id === shortId);
+    if (schoolShort) {
+      schoolShort.status = 'withdrawn';
+      schoolShort.withdrawnAt = shortEntry.withdrawnAt;
+      schoolShort.withdrawalNote = shortEntry.withdrawalNote;
+      schoolShort.withdrawalAmount = withdrawalAmount;
+    }
+
+    this.addTradeLog({
+      type: 'short_withdrawal',
+      school: shortEntry.team,
+      stockName: shortEntry.stockName,
+      quantity: shortEntry.shares,
+      price: currentPrice,
+      timestamp: new Date().toISOString(),
+      details: shortEntry.withdrawalNote,
+    });
+    writeDatabase(data);
+    return { success: true, message: 'Short withdrawn', amount: withdrawalAmount };
+  }
+
   addTradeLog(entry) {
-    const data = require('./database.json');
+    const data = readDatabase();
     if (!data.tradeLog) data.tradeLog = [];
     data.tradeLog.push(entry);
     if (data.tradeLog.length > 500) data.tradeLog = data.tradeLog.slice(-500);
-    fs.writeFileSync('./database.json', JSON.stringify(data));
+    writeDatabase(data);
   }
 
   getTradeLog() {
-    const data = require('./database.json');
+    const data = readDatabase();
     return data.tradeLog || [];
   }
 }

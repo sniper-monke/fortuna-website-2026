@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fortuna Leaderboard</title>
+  <link href="/static/tailwind.min.css" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #071120 0%, #10233f 45%, #0f172a 100%);
+      color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+    }
+    .glass {
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(125, 211, 252, 0.2);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex items-center justify-center p-6">
+    <div class="glass rounded-3xl w-full max-w-6xl p-8">
+      <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+        <div>
+          <p class="text-sm uppercase tracking-[0.35em] text-sky-300">Live portfolio ranking</p>
+          <h1 class="text-4xl font-black text-white">Fortuna Rolling Leaderboard</h1>
+        </div>
+        <div id="updatedAt" class="text-slate-400 text-sm"></div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead>
+            <tr class="border-b border-white/10">
+              <th class="px-4 py-3 text-sky-300 font-semibold">Rank</th>
+              <th class="px-4 py-3 text-sky-300 font-semibold">Team</th>
+              <th class="px-4 py-3 text-sky-300 font-semibold">Folio Value</th>
+              <th class="px-4 py-3 text-sky-300 font-semibold">Cash</th>
+              <th class="px-4 py-3 text-sky-300 font-semibold">Freeze Score</th>
+              <th class="px-4 py-3 text-sky-300 font-semibold">Top Holdings</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function renderLeaderboard(data) {
+      const body = document.getElementById('leaderboardBody');
+      const updatedAt = document.getElementById('updatedAt');
+      if (!data || !data.teams) {
+        body.innerHTML = '<tr><td colspan="6" class="px-4 py-6 text-center text-slate-400">No leaderboard data yet.</td></tr>';
+        updatedAt.textContent = 'Waiting for first snapshot';
+        return;
+      }
+      const teams = [...data.teams].sort((a, b) => b.folioValue - a.folioValue);
+      body.innerHTML = teams.map((team, idx) => {
+        const topHoldings = Object.entries(team.holdings || {}).slice(0, 3).map(([name, hold]) => `${name} (${hold.qty})`).join(', ') || 'No holdings';
+        return `<tr class="border-b border-white/10 hover:bg-white/5">
+          <td class="px-4 py-3 font-bold text-lg ${idx === 0 ? 'text-amber-300' : 'text-white'}">${idx + 1}</td>
+          <td class="px-4 py-3 font-semibold text-sky-100">${team.team}</td>
+          <td class="px-4 py-3 text-emerald-300">₹${team.folioValue.toLocaleString('hi')}</td>
+          <td class="px-4 py-3 text-slate-200">₹${team.cash.toLocaleString('hi')}</td>
+          <td class="px-4 py-3 text-amber-300">${team.freezeScore.toFixed(2)}</td>
+          <td class="px-4 py-3 text-slate-300">${topHoldings}</td>
+        </tr>`;
+      }).join('');
+      updatedAt.textContent = `Updated ${new Date().toLocaleTimeString('en-IN')}`;
+    }
+
+    async function refreshLeaderboard() {
+      try {
+        const response = await fetch('/leaderboardData');
+        const data = await response.json();
+        renderLeaderboard(data);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    refreshLeaderboard();
+    setInterval(refreshLeaderboard, 5000);
+  </script>
+</body>
+</html>
