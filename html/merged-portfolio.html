@@ -509,6 +509,18 @@
       border: 1px solid rgba(239, 68, 68, 0.3);
     }
 
+    .offer-status.declined {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .offer-status.retracted {
+      background: rgba(148, 163, 184, 0.15);
+      color: var(--text-secondary);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
     .trade-offer-card .offer-details {
       font-size: 0.78rem;
       color: var(--text-secondary);
@@ -535,6 +547,46 @@
     }
 
     .trade-offer-card .offer-accept-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .trade-offer-card .offer-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .trade-offer-card .offer-action-btn {
+      flex: 1;
+      padding: 0.45rem;
+      border-radius: 8px;
+      border: 1px solid var(--glass-border);
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--text-secondary);
+      font-weight: 700;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .trade-offer-card .offer-action-btn:hover {
+      border-color: var(--gold-primary);
+      color: var(--text-primary);
+    }
+
+    .trade-offer-card .offer-action-btn.decline {
+      border-color: var(--danger);
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.12);
+    }
+
+    .trade-offer-card .offer-action-btn.decline:hover {
+      background: rgba(239, 68, 68, 0.25);
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
+    }
+
+    .trade-offer-card .offer-action-btn:disabled {
       opacity: 0.4;
       cursor: not-allowed;
     }
@@ -2636,7 +2688,7 @@
           const isMine = offer.fromSchool === mySchoolCode;
           const direction = isMine ? 'To: ' + offer.toSchool : 'From: ' + offer.fromSchool;
           const statusClass = offer.status || 'pending';
-          const canAccept = !isMine && statusClass === 'pending';
+          const isPending = statusClass === 'pending';
 
           html += '<div class="trade-offer-card">';
           html += '<div class="offer-header">';
@@ -2648,8 +2700,17 @@
           html += '<div>Price: Rs ' + Number(offer.price).toLocaleString("hi") + '/share &bull; Total: Rs ' + (Number(offer.price) * offer.quantity).toLocaleString("hi") + '</div>';
           html += '</div>';
 
-          if (canAccept) {
-            html += '<button class="offer-accept-btn" onclick="acceptTradeOffer(\'' + offer.id + '\', this)">Accept Offer</button>';
+          if (isPending) {
+            if (isMine) {
+              html += '<div class="offer-actions">';
+              html += '<button class="offer-action-btn" onclick="retractTradeOffer(\'' + offer.id + '\', this)">Retract</button>';
+              html += '</div>';
+            } else {
+              html += '<div class="offer-actions">';
+              html += '<button class="offer-accept-btn" onclick="acceptTradeOffer(\'' + offer.id + '\', this)" style="margin-top: 0;">Accept Offer</button>';
+              html += '<button class="offer-action-btn decline" onclick="declineTradeOffer(\'' + offer.id + '\', this)">Decline</button>';
+              html += '</div>';
+            }
           }
 
           html += '</div>';
@@ -2698,6 +2759,80 @@
         if (btnEl) {
           btnEl.disabled = false;
           btnEl.textContent = 'Accept Offer';
+        }
+      }
+    }
+
+    async function declineTradeOffer(offerId, btnEl) {
+      const token = getSSIDToken();
+      if (!token || !token.includes('_')) {
+        setTradeStatus('Session expired.', 'error', 'tradeViewStatus');
+        return;
+      }
+
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.textContent = 'Declining...';
+      }
+
+      try {
+        const res = await fetch('/declineTradeOffer?school=' + encodeURIComponent(token) + '&offerId=' + encodeURIComponent(offerId));
+        const data = await res.json();
+
+        if (data.success === false || data.error) {
+          setTradeStatus(data.message || data.error || 'Failed to decline offer.', 'error', 'tradeViewStatus');
+          if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.textContent = 'Decline';
+          }
+          return;
+        }
+
+        setTradeStatus('Offer declined.', 'success', 'tradeViewStatus');
+        loadMyTradeOffers();
+      } catch (err) {
+        console.error('Decline offer error:', err);
+        setTradeStatus('Network error.', 'error', 'tradeViewStatus');
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.textContent = 'Decline';
+        }
+      }
+    }
+
+    async function retractTradeOffer(offerId, btnEl) {
+      const token = getSSIDToken();
+      if (!token || !token.includes('_')) {
+        setTradeStatus('Session expired.', 'error', 'tradeViewStatus');
+        return;
+      }
+
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.textContent = 'Retracting...';
+      }
+
+      try {
+        const res = await fetch('/retractTradeOffer?school=' + encodeURIComponent(token) + '&offerId=' + encodeURIComponent(offerId));
+        const data = await res.json();
+
+        if (data.success === false || data.error) {
+          setTradeStatus(data.message || data.error || 'Failed to retract offer.', 'error', 'tradeViewStatus');
+          if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.textContent = 'Retract';
+          }
+          return;
+        }
+
+        setTradeStatus('Offer retracted.', 'success', 'tradeViewStatus');
+        loadMyTradeOffers();
+      } catch (err) {
+        console.error('Retract offer error:', err);
+        setTradeStatus('Network error.', 'error', 'tradeViewStatus');
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.textContent = 'Retract';
         }
       }
     }

@@ -708,6 +708,34 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     return { success: true, message: 'Trade completed' };
   }
 
+  // Decline a trade offer (receiving team)
+  declineTradeOffer(offerId, school) {
+    const data = require('./database.json');
+    if (!data.tradeOffers) return { success: false, message: 'No trade offers' };
+    const offerIdx = data.tradeOffers.findIndex(o => o.id === offerId && o.status === 'pending');
+    if (offerIdx === -1) return { success: false, message: 'Offer not found or already processed' };
+    const offer = data.tradeOffers[offerIdx];
+    if (offer.toSchool !== school) return { success: false, message: 'This offer is not for your team' };
+    offer.status = 'declined';
+    offer.resolvedAt = new Date().toISOString();
+    fs.writeFileSync('./database.json', JSON.stringify(data));
+    return { success: true, message: 'Offer declined' };
+  }
+
+  // Retract a trade offer (sending team)
+  retractTradeOffer(offerId, school) {
+    const data = require('./database.json');
+    if (!data.tradeOffers) return { success: false, message: 'No trade offers' };
+    const offerIdx = data.tradeOffers.findIndex(o => o.id === offerId && o.status === 'pending');
+    if (offerIdx === -1) return { success: false, message: 'Offer not found or already processed' };
+    const offer = data.tradeOffers[offerIdx];
+    if (offer.fromSchool !== school) return { success: false, message: 'This offer is not yours to retract' };
+    offer.status = 'retracted';
+    offer.resolvedAt = new Date().toISOString();
+    fs.writeFileSync('./database.json', JSON.stringify(data));
+    return { success: true, message: 'Offer retracted' };
+  }
+
   // Market freeze: disable trading, calculate and store scoring snapshot
   marketFreeze() {
     const data = readDatabase();

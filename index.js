@@ -484,6 +484,32 @@ app.get('/getMyTradeOffers', (req, res) => {
   return res.json({success: true, offers});
 });
 
+app.get('/declineTradeOffer', (req, res) => {
+  const schoolToken = req.query.school;
+  if (!schoolToken || !schoolToken.includes('_')) return res.status(400).json({success: false, message: 'Invalid auth'});
+  const school = schoolToken.split('_')[0];
+  const schoolPass = schoolToken.split('_')[1];
+  const acc = JSON.parse(process.env.accounts);
+  const found = acc.some(a => a.username == school && a.password == schoolPass);
+  if (!found) return res.json({success: false, message: 'Invalid auth'});
+  const result = db.declineTradeOffer(req.query.offerId, school);
+  broadcastData();
+  return res.json(result);
+});
+
+app.get('/retractTradeOffer', (req, res) => {
+  const schoolToken = req.query.school;
+  if (!schoolToken || !schoolToken.includes('_')) return res.status(400).json({success: false, message: 'Invalid auth'});
+  const school = schoolToken.split('_')[0];
+  const schoolPass = schoolToken.split('_')[1];
+  const acc = JSON.parse(process.env.accounts);
+  const found = acc.some(a => a.username == school && a.password == schoolPass);
+  if (!found) return res.json({success: false, message: 'Invalid auth'});
+  const result = db.retractTradeOffer(req.query.offerId, school);
+  broadcastData();
+  return res.json(result);
+});
+
 app.get('/marketFreeze', (req, res) => {
   if (req.query.u == u && req.query.p == p) {
     const result = db.marketFreeze();
