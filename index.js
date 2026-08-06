@@ -5,6 +5,7 @@ const db = new Database();
 const express = require('express');
 const app = express();
 const http = require('http');
+const fs = require('fs');
 const WebSocket = require('ws');
 
 // Create HTTP server
@@ -101,7 +102,6 @@ function getCurrentData() {
       }]);
     }
     // Save the updated data
-    const fs = require('fs');
     fs.writeFileSync('./database.json', JSON.stringify(d));
     dirty = false;
   } else if (dirty) {
