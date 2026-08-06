@@ -202,7 +202,7 @@ class Database {
     // Update price history
     const updatedDb = this.updateStockPriceHistory(stockIndex, oldPrice, p);
     Object.assign(db, updatedDb);
-    this.addTradeLog({
+    this.addTradeLog(db, {
       type: 'buy',
       school, stockName: stockname, quantity: n,
       price: p, totalCost: p * n, oldPrice,
@@ -349,7 +349,7 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
       db.stockprices[stockIndex].stocksbought = 0;
     }
     
-    this.addTradeLog({
+    this.addTradeLog(db, {
       type: 'sell',
       school, stockName: stockname, quantity: n,
       price: Number(db.stockprices[stockIndex].price),
@@ -607,7 +607,7 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     });
     data.stockprices[stockIndex].stocksbought = allocated;
 
-    this.addTradeLog({
+    this.addTradeLog(data, {
       type: 'ipo',
       stockName: name, quantity: supply,
       price, timestamp: new Date().toISOString()
@@ -636,7 +636,7 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     data.schooldata[toIdx].stocks[stockIndex] += quantity;
     data.schooldata[fromIdx].cash += totalValue;
     data.schooldata[toIdx].cash -= totalValue;
-    this.addTradeLog({
+    this.addTradeLog(data, {
       type: 'transfer',
       fromSchool, toSchool, stockName, quantity,
       price: negotiatedPrice,
@@ -697,7 +697,7 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     data.schooldata[fromIdx].cash += totalValue;
     data.schooldata[toIdx].cash -= totalValue;
     offer.status = 'completed';
-    this.addTradeLog({
+    this.addTradeLog(data, {
       type: 'user_trade',
       fromSchool: offer.fromSchool, toSchool: offer.toSchool,
       stockName: offer.stockName, quantity: offer.quantity,
@@ -876,13 +876,14 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     if (amount <= 0) return { success: false, message: `${team} has no qualifying dividend holdings` };
     school.cash = Number(school.cash) + amount;
     writeDatabase(data);
-    this.addTradeLog({
+    this.addTradeLog(data, {
       type: 'dividend',
       school: team,
       quantity: breakdown.length,
       timestamp: new Date().toISOString(),
       details: [{ team, amount, breakdown }],
     });
+    writeDatabase(data);
     return { success: true, message: `Dividend declared for ${team}`, team, amount, breakdown };
   }
 
@@ -899,12 +900,13 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     });
 
     writeDatabase(data);
-    this.addTradeLog({
+    this.addTradeLog(data, {
       type: 'dividend',
       quantity: credits.length,
       timestamp: new Date().toISOString(),
       details: credits,
     });
+    writeDatabase(data);
     return { success: true, message: 'Dividends declared', credits };
   }
 
@@ -937,7 +939,7 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
 
     data.shorts.push(shortEntry);
     data.schooldata[schoolIndex].shorts.push(shortEntry);
-    this.addTradeLog({
+    this.addTradeLog(data, {
       type: 'short',
       school: team,
       stockName,
@@ -991,7 +993,7 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
       schoolShort.withdrawalAmount = withdrawalAmount;
     }
 
-    this.addTradeLog({
+    this.addTradeLog(data, {
       type: 'short_withdrawal',
       school: shortEntry.team,
       stockName: shortEntry.stockName,
@@ -1004,12 +1006,10 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     return { success: true, message: 'Short withdrawn', amount: withdrawalAmount };
   }
 
-  addTradeLog(entry) {
-    const data = readDatabase();
+  addTradeLog(data, entry) {
     if (!data.tradeLog) data.tradeLog = [];
     data.tradeLog.push(entry);
-    if (data.tradeLog.length > 500) data.tradeLog = data.tradeLog.slice(-500);
-    writeDatabase(data);
+    if (data.tradeLog.length > 10000) data.tradeLog = data.tradeLog.slice(-10000);
   }
 
   getTradeLog() {
