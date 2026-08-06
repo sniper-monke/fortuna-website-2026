@@ -84,6 +84,11 @@ function getCurrentData() {
       }
     });
   }
+
+  // Ensure shorts array always exists in the payload
+  if (!Array.isArray(d.shorts)) {
+    d.shorts = [];
+  }
   
   // Initialize stockPriceHistory if it doesn't exist
   if (!d.stockPriceHistory) {
@@ -329,6 +334,7 @@ app.get('/adminauth', (req, res) => {
 app.get('/setTT', (req, res) => {
   if (req.query.u == u && req.query.p == p) {
     tradetime = req.query.value === 'true';
+    db.setTradetime(tradetime);
     return res.json({data: 'success'});
   } else {
     return res.json({data: 'false'});
@@ -346,6 +352,8 @@ app.get('/setSP', (req, res) => {
 app.get('/resetDB', (req, res) => {
   if (req.query.u == u && req.query.p == p) {
     db.resetDatabase();
+    tradetime = true;
+    broadcastData();
     return res.json({data: 'success'});
   } else {
     return res.json({data: 'false'});
@@ -404,7 +412,7 @@ app.get('/ipoLaunch', (req, res) => {
     let bids = [];
     try { bids = JSON.parse(req.query.bids); } catch (e) { return res.json({success: false, message: 'Invalid bids JSON'}); }
     const supply = parseInt(req.query.supply) || 0;
-    const result = db.launchIpo(req.query.name, supply, bids);
+    const result = db.launchIpo(req.query.name, req.query.sector, supply, bids);
     broadcastData();
     return res.json(result);
   } else {
@@ -478,10 +486,10 @@ app.get('/getMyTradeOffers', (req, res) => {
 
 app.get('/marketFreeze', (req, res) => {
   if (req.query.u == u && req.query.p == p) {
-    tradetime = false;
-    const snapshot = db.marketFreeze();
+    const result = db.marketFreeze();
+    if (result.success) tradetime = false;
     broadcastData();
-    return res.json({success: true, snapshot});
+    return res.json(result);
   } else {
     return res.json({success: false, message: 'Unauthorized'});
   }
@@ -489,10 +497,10 @@ app.get('/marketFreeze', (req, res) => {
 
 app.get('/marketStart', (req, res) => {
   if (req.query.u == u && req.query.p == p) {
-    tradetime = true;
-    db.marketStart();
+    const result = db.marketStart();
+    if (result.success) tradetime = true;
     broadcastData();
-    return res.json({success: true, message: 'Market started'});
+    return res.json(result);
   } else {
     return res.json({success: false, message: 'Unauthorized'});
   }
@@ -530,6 +538,15 @@ app.get('/leaderboardData', (req, res) => {
 app.get('/declareDividends', (req, res) => {
   if (req.query.u == u && req.query.p == p) {
     const result = db.declareDividends();
+    broadcastData();
+    return res.json(result);
+  }
+  return res.json({ success: false, message: 'Unauthorized' });
+});
+
+app.get('/declareDividend', (req, res) => {
+  if (req.query.u == u && req.query.p == p) {
+    const result = db.declareDividend(req.query.team);
     broadcastData();
     return res.json(result);
   }

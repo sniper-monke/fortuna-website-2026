@@ -798,6 +798,15 @@
       </div>
     </div>
 
+    <!-- Short Positions -->
+    <div class="holdings-container hover-lift scrollbar-hide" style="max-height: 220px; margin: 0.75rem 0;">
+      <div class="flex items-center gap-2 mb-2">
+        <i data-lucide="scanner" class="w-4 h-4" style="color: var(--gold-primary);"></i>
+        <h2 class="section-title text-sm mb-0">Short Positions</h2>
+      </div>
+      <div id="short-positions-list" class="space-y-1"></div>
+    </div>
+
     <!-- Stock Prices Table -->
     <div class="modern-table hover-lift">
       <div class="px-3 py-2 border-b border-gray-600">
@@ -2079,6 +2088,35 @@
       document.getElementById("profit-loss").style.color = isProfit ? "var(--success)" : "var(--danger)";
     }
 
+    // Render the current team's active short positions
+    function renderShortPositions(db, ssid) {
+      const list = document.getElementById('short-positions-list');
+      if (!list) return;
+      const shorts = (db.shorts || []).filter(s => s.team === ssid && s.status === 'active');
+      if (shorts.length === 0) {
+        list.innerHTML = '<div class="text-sm py-3" style="color: var(--text-muted);">No active short positions.</div>';
+        return;
+      }
+      list.innerHTML = shorts.map(short => {
+        const stock = db.stockprices.find(s => s.name === short.stockName);
+        const price = stock ? Number(stock.price) : 0;
+        const value = short.shares * price;
+        return `
+          <div class="holding-card">
+            <div class="flex justify-between items-center">
+              <div>
+                <div class="font-semibold text-sm" style="color: var(--text-primary);">${short.stockName} <span class="text-xs px-1.5 py-0.5 rounded font-bold" style="background: rgba(239,68,68,0.15); color: #ef4444;">SHORT</span></div>
+                <div class="text-xs" style="color: var(--text-secondary);">${short.shares} shares borrowed${short.note && short.note !== 'No note provided' ? ' &bull; ' + short.note : ''}</div>
+              </div>
+              <div class="text-right">
+                <div class="font-bold text-sm" style="color: #ef4444;">₹${value.toLocaleString('hi')}</div>
+                <div class="text-xs" style="color: var(--text-muted);">&#8377;${price.toLocaleString('hi')}/share</div>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
     // Helper function to update only changed stock charts
     function updateChangedStockCharts(changedStocks, sp) {
       changedStocks.forEach(({ index, name }) => {
@@ -2339,6 +2377,9 @@
 
         // Update summary stats (always update since they depend on current prices)
         updateSummaryStats(sp, db.schooldata[si], currentcash);
+
+        // Update short positions
+        renderShortPositions(db, ssid);
 
         // Update main chart only if holdings changed or first load
         if (stockHoldingsChanged || isFirstLoad) {

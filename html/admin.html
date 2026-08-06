@@ -912,6 +912,8 @@
                                     <th class="px-3 py-2 text-gold-primary">Team</th>
                                     <th class="px-3 py-2 text-gold-primary">Stock</th>
                                     <th class="px-3 py-2 text-gold-primary">Shares</th>
+                                    <th class="px-3 py-2 text-gold-primary">Market Price</th>
+                                    <th class="px-3 py-2 text-gold-primary">Withdraw Cost (x1.03)</th>
                                     <th class="px-3 py-2 text-gold-primary">Status</th>
                                     <th class="px-3 py-2 text-gold-primary">Note</th>
                                     <th class="px-3 py-2 text-gold-primary">Action</th>
@@ -1133,14 +1135,18 @@
         function updateDisplay(db) {
             const badge = document.getElementById('marketStatusBadge');
             const text = document.getElementById('marketStatusText');
+            const freezeBtn = document.getElementById('marketFreezeBtn');
+            const startBtn = document.getElementById('marketStartBtn');
             if (db.tradetime) {
                 badge.textContent = 'ACTIVE'; badge.style.background = 'rgba(16,185,129,0.2)'; badge.style.color = '#10b981'; badge.style.borderColor = 'rgba(16,185,129,0.4)';
                 text.textContent = 'Trading is enabled';
-                document.getElementById('marketFreezeBtn').style.display = '';
-                document.getElementById('marketStartBtn').style.display = '';
+                if (freezeBtn) freezeBtn.style.display = '';
+                if (startBtn) startBtn.style.display = 'none';
             } else {
                 badge.textContent = 'FROZEN'; badge.style.background = 'rgba(239,68,68,0.2)'; badge.style.color = '#ef4444'; badge.style.borderColor = 'rgba(239,68,68,0.4)';
                 text.textContent = 'Trading is disabled';
+                if (freezeBtn) freezeBtn.style.display = 'none';
+                if (startBtn) startBtn.style.display = '';
             }
 
             let sp = db.stockprices;
@@ -1189,6 +1195,12 @@
                                 onmouseout='this.style.background="linear-gradient(135deg,rgba(59,130,246,0.1),rgba(59,130,246,0.05))";this.style.color="#3b82f6";this.style.transform="translateY(0)";this.style.boxShadow="none"'>
                             Change Portfolio
                         </button>
+                        <button onclick='declareDividendForTeam("${school.schoolcode}")' 
+                                style='border:2px solid #10b981;color:#10b981;background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(16,185,129,0.05));padding:0.5rem 1rem;border-radius:8px;font-weight:600;font-size:0.875rem;margin-left:0.5rem;'
+                                onmouseover='this.style.background="#10b981";this.style.color="white";this.style.transform="translateY(-1px)";this.style.boxShadow="0 4px 15px rgba(16,185,129,0.3)"'
+                                onmouseout='this.style.background="linear-gradient(135deg,rgba(16,185,129,0.1),rgba(16,185,129,0.05))";this.style.color="#10b981";this.style.transform="translateY(0)";this.style.boxShadow="none"'>
+                            Declare Dividend
+                        </button>
                     </td>
                 </tr>`;
             });
@@ -1235,13 +1247,19 @@
             const suspensionStock = document.getElementById('suspensionStock');
             const transferStock = document.getElementById('transferStock');
             if (percentageStock) {
+                const prev = percentageStock.value;
                 percentageStock.innerHTML = sp.map(stock => `<option value="${stock.name}">${stock.name} - ₹${stock.price}</option>`).join('');
+                if (prev && sp.some(s => s.name === prev)) percentageStock.value = prev;
             }
             if (suspensionStock) {
+                const prev = suspensionStock.value;
                 suspensionStock.innerHTML = sp.map(stock => `<option value="${stock.name}">${stock.name}</option>`).join('');
+                if (prev && sp.some(s => s.name === prev)) suspensionStock.value = prev;
             }
             if (transferStock) {
+                const prev = transferStock.value;
                 transferStock.innerHTML = sp.map(stock => `<option value="${stock.name}">${stock.name} - ₹${stock.price}</option>`).join('');
+                if (prev && sp.some(s => s.name === prev)) transferStock.value = prev;
             }
         }
 
@@ -1250,11 +1268,28 @@
             const teamSelect = document.getElementById('shortTeam');
             const stockSelect = document.getElementById('shortStock');
             if (teamSelect) {
+                const prev = teamSelect.value;
                 teamSelect.innerHTML = window.currentData.schooldata.map(school => `<option value="${school.schoolcode}">${school.schoolcode}</option>`).join('');
+                if (prev && window.currentData.schooldata.some(s => s.schoolcode === prev)) teamSelect.value = prev;
             }
             if (stockSelect) {
+                const prev = stockSelect.value;
                 stockSelect.innerHTML = window.currentData.stockprices.map(stock => `<option value="${stock.name}">${stock.name}</option>`).join('');
+                if (prev && window.currentData.stockprices.some(s => s.name === prev)) stockSelect.value = prev;
             }
+        }
+
+        function declareDividendForTeam(team) {
+            if (!confirm(`Declare dividends for ${team} based on their qualifying holdings?`)) return;
+            fetch(`/declareDividend?u=${u}&p=${p}&team=${encodeURIComponent(team)}`).then(x => x.json()).then(r => {
+                if (r.success) {
+                    const breakdown = (r.breakdown || []).map(b => `${b.stock} (${b.qty} @ ${b.amount})`).join(', ');
+                    showNotification('success', 'Dividend Declared', `${team} received ₹${Number(r.amount).toFixed(2)}${breakdown ? ' — ' + breakdown : ''}`);
+                    update();
+                } else {
+                    showNotification('error', 'Dividend', r.message || 'Could not declare dividend');
+                }
+            });
         }
 
         function declareDividends() {
@@ -1300,26 +1335,33 @@
                 const body = document.getElementById('shortsTableBody');
                 if (!body) return;
                 if (!r.success) {
-                    body.innerHTML = '<tr><td colspan="6" class="px-3 py-2 text-red-300">Unable to load shorts</td></tr>';
+                    body.innerHTML = '<tr><td colspan="8" class="px-3 py-2 text-red-300">Unable to load shorts</td></tr>';
                     return;
                 }
                 const shorts = Array.isArray(r.shorts) ? r.shorts : [];
                 if (shorts.length === 0) {
-                    body.innerHTML = '<tr><td colspan="6" class="px-3 py-2 text-zinc-400">No shorts recorded yet.</td></tr>';
+                    body.innerHTML = '<tr><td colspan="8" class="px-3 py-2 text-zinc-400">No shorts recorded yet.</td></tr>';
                     return;
                 }
-                body.innerHTML = shorts.map(short => `
+                const sp = (window.currentData && window.currentData.stockprices) || [];
+                body.innerHTML = shorts.map(short => {
+                    const stock = sp.find(s => s.name === short.stockName);
+                    const price = stock ? Number(stock.price) : 0;
+                    const cost = (short.shares * price * 1.03).toFixed(2);
+                    return `
                     <tr class="border-b border-white/10">
                         <td class="px-3 py-2">${short.team}</td>
                         <td class="px-3 py-2">${short.stockName}</td>
                         <td class="px-3 py-2">${short.shares}</td>
+                        <td class="px-3 py-2">₹${price.toLocaleString('hi')}</td>
+                        <td class="px-3 py-2 ${short.status === 'active' ? 'text-amber-300' : 'text-zinc-500'}">₹${Number(cost).toLocaleString('hi')}</td>
                         <td class="px-3 py-2">${short.status === 'active' ? '<span class="text-amber-300">Active</span>' : '<span class="text-emerald-300">Withdrawn</span>'}</td>
                         <td class="px-3 py-2">${short.note || '-'}</td>
                         <td class="px-3 py-2">
                             ${short.status === 'active' ? `<div class="flex flex-wrap gap-2 items-center"><input type="text" id="short-withdraw-note-${short.id}" class="rounded-md bg-slate-900 border border-white/10 px-2 py-1 text-sm" placeholder="Withdraw at round 4"><button class="btn" style="border-color:#ef4444;color:#ef4444;background:rgba(239,68,68,0.12);padding:0.4rem 0.7rem;font-weight:700;" onclick="withdrawShort('${short.id}')">Withdraw Short</button></div>` : '<span class="text-zinc-500">-</span>'}
                         </td>
-                    </tr>
-                `).join('');
+                    </tr>`;
+                }).join('');
             });
         }
 
@@ -1453,13 +1495,15 @@
 
         function launchIpo() {
             const name = document.getElementById('ipoStockName').value.trim();
+            const sector = document.getElementById('ipoSector').value.trim();
             const supply = parseInt(document.getElementById('ipoSupply').value, 10);
             const bids = collectIpoBids();
             if (!name) { showNotification('error', 'IPO', 'Enter a company name'); return; }
+            if (!sector) { showNotification('error', 'IPO', 'Enter a sector'); return; }
             if (!supply || supply <= 0) { showNotification('error', 'IPO', 'Enter a valid share supply'); return; }
             if (bids.length === 0) { showNotification('error', 'IPO', 'Enter at least one valid bid'); return; }
             if (!confirm(`Launch IPO for ${name} at ${supply.toLocaleString('hi')} shares?`)) return;
-            fetch(`/ipoLaunch?u=${u}&p=${p}&name=${encodeURIComponent(name)}&supply=${supply}&bids=${encodeURIComponent(JSON.stringify(bids))}`)
+            fetch(`/ipoLaunch?u=${u}&p=${p}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&supply=${supply}&bids=${encodeURIComponent(JSON.stringify(bids))}`)
                 .then(x=>x.json()).then(r => {
                     if (r.success) { showNotification('success', 'IPO Launched', `${name} listed at ₹${Number(r.clearingPrice).toFixed(2)}`); update(); }
                     else { showNotification('error', 'IPO Failed', r.message || 'Could not launch IPO'); }
@@ -1483,12 +1527,18 @@
             const from = document.getElementById('transferFrom');
             const to = document.getElementById('transferTo');
             const stock = document.getElementById('transferStock');
+            const fromPrev = from ? from.value : '';
+            const toPrev = to ? to.value : '';
+            const stockPrev = stock ? stock.value : '';
             from.innerHTML = ''; to.innerHTML = ''; stock.innerHTML = '';
             sd.forEach(s => {
                 from.innerHTML += `<option value="${s.schoolcode}">${s.schoolcode}</option>`;
                 to.innerHTML += `<option value="${s.schoolcode}">${s.schoolcode}</option>`;
             });
             sp.forEach(s => { stock.innerHTML += `<option value="${s.name}">${s.name} - ₹${s.price}</option>`; });
+            if (fromPrev && sd.some(s => s.schoolcode === fromPrev)) from.value = fromPrev;
+            if (toPrev && sd.some(s => s.schoolcode === toPrev)) to.value = toPrev;
+            if (stockPrev && sp.some(s => s.name === stockPrev)) stock.value = stockPrev;
         }
 
         function executeTransfer() {

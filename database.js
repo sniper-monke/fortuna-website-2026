@@ -497,6 +497,12 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     if (valid.length === 0) {
       return { success: false, message: 'No valid bids (need team, price and shares)' };
     }
+    const data = require('./database.json');
+    const validTeams = new Set(data.schooldata.map(s => s.schoolcode));
+    const unknown = [...new Set(valid.map(b => b.team).filter(t => !validTeams.has(t)))];
+    if (unknown.length > 0) {
+      return { success: false, message: `Unknown team(s): ${unknown.join(', ')}` };
+    }
     const sorted = valid.slice().sort((a, b) => b.price - a.price);
     let cumulative = 0;
     let clearingPrice = null;
@@ -520,11 +526,15 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     if (remaining < 0) remaining = 0;
 
     const allocations = {};
-    above.forEach(b => { allocations[b.team] = { price: clearingPrice, shares: b.shares }; });
+    above.forEach(b => {
+      if (!allocations[b.team]) allocations[b.team] = { price: clearingPrice, shares: 0 };
+      allocations[b.team].shares += b.shares;
+    });
     if (demandAt > 0) {
       const ratio = remaining / demandAt;
       atPrice.forEach(b => {
-        allocations[b.team] = { price: clearingPrice, shares: Math.floor(b.shares * ratio) };
+        if (!allocations[b.team]) allocations[b.team] = { price: clearingPrice, shares: 0 };
+        allocations[b.team].shares += Math.floor(b.shares * ratio);
       });
     }
 
@@ -540,7 +550,7 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
   }
 
   // IPO: add the new stock to the exchange, allocate shares and charge teams
-  launchIpo(name, supply, bids) {
+  launchIpo(name, sector, supply, bids) {
     const result = this.calculateIpoPrice(bids, supply);
     if (!result.success) return result;
     const data = require('./database.json');
@@ -548,11 +558,25 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
       return { success: false, message: 'Stock already exists on the exchange' };
     }
     const price = result.clearingPrice;
+
+    // Ensure every allocated team can actually pay for its shares
+    const shortfall = [];
+    Object.entries(result.allocations).forEach(([team, alloc]) => {
+      const school = data.schooldata.find(s => s.schoolcode === team);
+      const cost = alloc.price * alloc.shares;
+      if (school && cost > school.cash) {
+        shortfall.push(`${team} (needs ₹${cost.toFixed(2)}, has ₹${school.cash.toFixed(2)})`);
+      }
+    });
+    if (shortfall.length > 0) {
+      return { success: false, message: `Cannot launch IPO: ${shortfall.join(', ')} cannot afford their allocation` };
+    }
+
     const stockIndex = data.stockprices.length;
     const stock = {
       name,
       price: price.toFixed(2),
-      sector: "Aerospace and Defense",
+      sector: sector || "Aerospace and Defense",
       totalStock: supply,
       stocksbought: 0,
       lastBoughtBy: "",
@@ -564,8 +588,11 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     data.stockprices.push(stock);
     if (!data.stockPriceHistory) data.stockPriceHistory = [];
     data.stockPriceHistory.push([{ price, timestamp: new Date().toISOString(), change: 0 }]);
+    // Do NOT touch allPrices: each entry is a price array parallel to stockprices used by
+    // revisePrices(). Pushing a new entry (the old bug) created a bogus 1-element revision
+    // that would apply the IPO price to the first stock on revision. The IPO price is already
+    // recorded in the stock record and stockPriceHistory.
     if (!data.allPrices) data.allPrices = [];
-    data.allPrices.push([price]);
 
     // Extend every team's holdings and allocate shares at the clearing price
     data.schooldata.forEach(school => { school.stocks.push(0); });
@@ -683,7 +710,10 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
 
   // Market freeze: disable trading, calculate and store scoring snapshot
   marketFreeze() {
-    const data = require('./database.json');
+    const data = readDatabase();
+    if (data.tradetime === false) {
+      return { success: false, message: 'Market is already frozen' };
+    }
     data.tradetime = false;
     if (!data.freezeScores) data.freezeScores = [];
     const snapshot = this.calculateScores();
@@ -692,15 +722,25 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     data.freezeScores.push(snapshot);
     data.lastFreezeSnapshot = snapshot;
     fs.writeFileSync('./database.json', JSON.stringify(data));
-    return snapshot;
+    return { success: true, snapshot };
   }
 
   // Market start: enable trading
   marketStart() {
-    const data = require('./database.json');
+    const data = readDatabase();
+    if (data.tradetime === true) {
+      return { success: false, message: 'Market is already running' };
+    }
     data.tradetime = true;
     fs.writeFileSync('./database.json', JSON.stringify(data));
     return { success: true, message: 'Market started' };
+  }
+
+  // Persist the trading flag (used by the legacy /setTT endpoint)
+  setTradetime(value) {
+    const data = readDatabase();
+    data.tradetime = value === true;
+    fs.writeFileSync('./database.json', JSON.stringify(data));
   }
 
   // Calculate scores: portfolio value (out of 25) + concentration (out of 5)
@@ -718,13 +758,16 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
         }
       });
 
-      // Concentration (largest single company as % of folio value)
+      // Weight of each company in the folio, plus concentration (largest as % of folio)
       let largestHoldingPct = 0;
       if (totalFolioValue > 0) {
         Object.values(holdings).forEach(h => {
           const pct = (h.value / totalFolioValue) * 100;
+          h.weight = parseFloat(pct.toFixed(2));
           if (pct > largestHoldingPct) largestHoldingPct = pct;
         });
+      } else {
+        Object.values(holdings).forEach(h => { h.weight = 0; });
       }
       let concentration = 5;
       if (largestHoldingPct > 60) concentration = 1;
@@ -780,24 +823,50 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     return results;
   }
 
+  // Helper: dividend due for one team's qualifying holdings
+  _dividendForSchool(data, school) {
+    let amount = 0;
+    const breakdown = [];
+    school.stocks.forEach((qty, idx) => {
+      const stock = data.stockprices[idx];
+      if (!stock || qty <= 0) return;
+      const yieldPct = Number(stock.dividendYield || stock.dividend || 0);
+      if (yieldPct <= 0) return;
+      const amt = qty * Number(stock.price) * (yieldPct / 100);
+      amount += amt;
+      breakdown.push({ stock: stock.name, qty, amount: parseFloat(amt.toFixed(2)) });
+    });
+    return { amount: parseFloat(amount.toFixed(2)), breakdown };
+  }
+
+  // Admin: declare dividends for a single team only
+  declareDividend(team) {
+    const data = readDatabase();
+    const school = data.schooldata.find((s) => s.schoolcode === team);
+    if (!school) return { success: false, message: 'Team not found' };
+    const { amount, breakdown } = this._dividendForSchool(data, school);
+    if (amount <= 0) return { success: false, message: `${team} has no qualifying dividend holdings` };
+    school.cash = Number(school.cash) + amount;
+    writeDatabase(data);
+    this.addTradeLog({
+      type: 'dividend',
+      school: team,
+      quantity: breakdown.length,
+      timestamp: new Date().toISOString(),
+      details: [{ team, amount, breakdown }],
+    });
+    return { success: true, message: `Dividend declared for ${team}`, team, amount, breakdown };
+  }
+
   declareDividends() {
     const data = readDatabase();
     const credits = [];
 
     data.schooldata.forEach((school) => {
-      let dividendAmount = 0;
-      school.stocks.forEach((qty, idx) => {
-        const stock = data.stockprices[idx];
-        if (!stock || qty <= 0) return;
-        const yieldPct = Number(stock.dividendYield || stock.dividend || 0);
-        if (yieldPct <= 0) return;
-        const currentPrice = Number(stock.price);
-        dividendAmount += qty * currentPrice * (yieldPct / 100);
-      });
-
-      if (dividendAmount > 0) {
-        school.cash = Number(school.cash) + Number(dividendAmount.toFixed(2));
-        credits.push({ team: school.schoolcode, amount: parseFloat(dividendAmount.toFixed(2)) });
+      const { amount } = this._dividendForSchool(data, school);
+      if (amount > 0) {
+        school.cash = Number(school.cash) + amount;
+        credits.push({ team: school.schoolcode, amount });
       }
     });
 
@@ -823,6 +892,10 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     if (!data.shorts) data.shorts = [];
     if (!data.schooldata[schoolIndex].shorts) data.schooldata[schoolIndex].shorts = [];
 
+    // Credit the borrowed shares to the team's portfolio (short = sell now, return later)
+    if (!data.schooldata[schoolIndex].stocks[stockIndex]) data.schooldata[schoolIndex].stocks[stockIndex] = 0;
+    data.schooldata[schoolIndex].stocks[stockIndex] += parsedShares;
+
     const shortEntry = {
       id: makeid(12),
       team,
@@ -830,6 +903,7 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
       shares: parsedShares,
       note: note || 'No note provided',
       status: 'active',
+      creditedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
     };
 
@@ -844,7 +918,7 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
       details: note || 'Short entered',
     });
     writeDatabase(data);
-    return { success: true, message: 'Short recorded', short: shortEntry };
+    return { success: true, message: 'Short recorded', short: shortEntry, creditedShares: parsedShares };
   }
 
   getShorts() {
@@ -870,6 +944,12 @@ Selling Dampener: 0.7 multiplier (selling has less impact than buying)
     }
 
     data.schooldata[schoolIndex].cash = Number(data.schooldata[schoolIndex].cash) - withdrawalAmount;
+
+    // Return the borrowed shares (remove from the team's holdings, never below zero)
+    if (data.schooldata[schoolIndex].stocks[stockIndex]) {
+      data.schooldata[schoolIndex].stocks[stockIndex] = Math.max(0, data.schooldata[schoolIndex].stocks[stockIndex] - shortEntry.shares);
+    }
+
     shortEntry.status = 'withdrawn';
     shortEntry.withdrawnAt = new Date().toISOString();
     shortEntry.withdrawalNote = note || 'No note provided';
