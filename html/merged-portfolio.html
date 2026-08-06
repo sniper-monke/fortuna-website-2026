@@ -2644,8 +2644,8 @@
           html += '<span class="offer-status ' + statusClass + '">' + statusClass + '</span>';
           html += '</div>';
           html += '<div class="offer-details">';
-          html += '<div><strong>' + offer.stock + '</strong> &times; ' + offer.qty + ' shares</div>';
-          html += '<div>Price: Rs ' + Number(offer.price).toLocaleString("hi") + '/share &bull; Total: Rs ' + (Number(offer.price) * offer.qty).toLocaleString("hi") + '</div>';
+          html += '<div><strong>' + offer.stockName + '</strong> &times; ' + offer.quantity + ' shares</div>';
+          html += '<div>Price: Rs ' + Number(offer.price).toLocaleString("hi") + '/share &bull; Total: Rs ' + (Number(offer.price) * offer.quantity).toLocaleString("hi") + '</div>';
           html += '</div>';
 
           if (canAccept) {
